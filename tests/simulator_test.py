@@ -35,17 +35,17 @@ def test_phenotype_simulation(CHR=0,data_path="./",data_identifier="test",prefil
     
     pheno_sim = PhenotypeSimulator(args)
     
-    genotype_data_test(pheno_sim, total_snps, total_genes, total_people)
+    genotype_data_validation(pheno_sim, total_snps, total_genes, total_people)
     
     phenotype, data, causal_snps_idx, effect_size, interactive_snps = pheno_sim.simulate_phenotype()
     
-    phenotype_test(phenotype, total_people)
+    phenotype_validation(phenotype, total_people)
     
-    causality_test(effect_size, causal_snps_idx)
+    causality_validation(effect_size, causal_snps_idx)
     
-    interaction_test(data, interactive_snps, causal_snps_idx)
+    interaction_validation(data, interactive_snps, causal_snps_idx)
 
-def interaction_test(data, interactive_snps, causal_snps_idx):
+def interaction_validation(data, interactive_snps, causal_snps_idx):
     assert type(interactive_snps) == dict
     for causal_snp in interactive_snps.keys():
         assert causal_snp in causal_snps_idx
@@ -55,7 +55,7 @@ def interaction_test(data, interactive_snps, causal_snps_idx):
         assert other_snp >= 0 and other_snp <= data.shape[0]
         assert data.iloc[other_snp]['Risk Allele'] == other_risk
     
-def causality_test(effect_size, causal_snps_idx):
+def causality_validation(effect_size, causal_snps_idx):
     assert type(effect_size) == dict
     assert type(causal_snps_idx) == list
     for snp in effect_size.keys():
@@ -63,13 +63,13 @@ def causality_test(effect_size, causal_snps_idx):
         assert len(effect_size[snp]) == 3
     
     
-def phenotype_test(phenotype, total_people):
+def phenotype_validation(phenotype, total_people):
     assert len(phenotype) == total_people
     assert min(phenotype) == 0
     assert max(phenotype) == 1
 
     
-def genotype_data_test(pheno_sim, snps, genes, people):
+def genotype_data_validation(pheno_sim, snps, genes, people):
     data = pheno_sim.read_genotype_data()
     expected_shape = (snps, people+5)
     assert data.shape == expected_shape

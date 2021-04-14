@@ -1,30 +1,16 @@
 # GWAS Data Simulation
 
+**TODO: Name the Package**
+
 PACKAGE is a toolkit for the simulation of diverse genotypes and phenotypes for GWAS analysis.
 
 ## Installation
 
 ### System requirements
 
-* **TODO: Not sure yet**
-
-### PyPI installation
-**TODO: To install atacworks in your environment, run the following in your terminal**
-```
-pip install gwas-sim
-```
-
-### Docker Installation
-**TODO: Docker based installation**
-
-If you'd like to skip all installation and use a pre-installed docker image instead,
-follow the instructions [here](Dockerfile.md), section "Pre-installed AtacWorks".
-
-**We have the docker file that clones the repo**
+* Python 3.6+
 
 ## Build from Source
-Follow the instructions below if you are interested in running gwas-sim outside
-of docker.
 
 ### 1. Clone repository
 
@@ -38,11 +24,11 @@ git clone --recursive -b master https://github.com/clara-genomics/gwas-data-simu
 
 ### 2. Install dependencies
 
-* Install gwas-sim and its associated dependencies from requirements.txt
+Install Package and its associated dependencies from requirements.txt
 
-    ```
-    pip install .
-    ```
+```
+pip install .
+```
     
 ### 3. Tests
 
@@ -59,20 +45,25 @@ Genomewide Data is found here: [1000 Genome Project](https://mathgen.stats.ox.ac
 
 [PLINK](https://www.cog-genomics.org/plink/) is used to filter the genotypes by any combination of features (exon, transcript, or gene) as well as covert to the Minor Allele frequency matrix. This can give as a matrix of people X SNP with the value being 0,1,2 correspodning to the MAF.
 
-The above features are taken from [Gencode Genome Annotations](ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz). This gives our mapping of snp postion to features and allows us to annotate our SNP data.
+The above features are taken from [Gencode Genome Annotations](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz). This gives our mapping of snp postion to features and allows us to annotate our SNP data.
 
 
 ## Workflow
-GWAS Data simulation relies on Hapgen2 to simulate a diverse genetic population of the desired size. It then simulates the phenotypes for this population for downstream analysis.
+PACKAGE simulates a diverse genetic population of the desired size given input genotype data for downstream analysis.
 
 ### 1. Generating Genotypes
 
-Example of how we generated 100000 Individuals from the Chromosome 21 using the 1000 Genome Project.
-**TODO: Update CLI to handle pre and post protected binaries**
+Utilized HAPGEN2 to create diverse genotype Controls to be used for the Phenotype simulation of desired population size. Please see HAPGEN2 Documentation for detailed parameter walkthough.
 
-Utilize HAPGEN2 to create diverse genotype Controls to be used for the Phenotype simulation of desired population size. Please see HAPGEN2 Documentation for detailed parameter walkthough.
+Gencode's hg19 Annotations were used for the Genotype Simulation. Users can download and use PACKAGE's annotation CLI option to read and clean the annotation file. If another form of annotations is to be used make sure that it is a space separated csv file with Columns for the Chromosome, Feature, Start Position, End Position, Feature ID.
 
-See the Exploratory Notebook for an example of the data manipulations for custom input genotypes.
+![Alt text](./exon_annotation.png?raw=true "Title")
+
+The Simulator can handle features including any combination of exons, transcripts, or genes.
+
+See [Exploratory Notebook](Example_Simulation_Playground.ipynb) for an example of the data manipulations for custom input genotypes as well as package testing.
+
+Here is an example of how we generated 100000 Individuals from the Chromosome 21 using the 1000 Genome Project.
 ```
 /hapgen2 \
        -h /DLGWAS/data/1000GP_Phase3/1000GP_Phase3_chr21.hap \
@@ -128,7 +119,8 @@ Results in the creation of an annotated matrix. Users are encouraged to use PLIN
     /DLGWAS/data/chr21_genotype_100k_exon.csv
 
 chr21_genotype_100k_exon.csv an annotated SNP X Person matrix with Genotype Values of 0,1,2
-**This is what is needed to run the phenotype simulation**
+
+**This data matrix is needed to run the phenotype simulation**
 ![Alt text](./annotated_matrix_result.png?raw=true "Title")
 
 ### 2. Generating Phenotypes
@@ -152,11 +144,13 @@ Results in the creation of
 **chr21_causal_snp_idx_100k_exon_example_name.pkl** is a dictionary mapping SNP ID to its mapped Gene Risk <br />
 **chr21_causal_genes_100k_exon_example_name.pkl** is a dictionary mapping Gene Feature ID to Gene Risk Score <br />
 
-### Results
-**TODO**
-Here I would like to showcase a figure or 2 from the paper or just link to paper as it is a good read.
+Histograms of the sampling distributions are created and saved for every major statistical choice.
 
-### Parameter Documentation
+## Results
+**TODO**
+Overview of paper and LINK
+
+## Parameter Documentation
 
 | Annotation Parameters | Default Value | Definition |
 | ---  | --- | --- |
@@ -196,4 +190,15 @@ Here I would like to showcase a figure or 2 from the paper or just link to paper
 | -num_snps --n_causal_snps | 100 | Number of Causal SNPs <br /> **required for random mode** |
 | -cgc --causal_gene_cut | 0.05 | Fraction of Causal Genes <br /> **required for gene mode** |
 | -mgr --max_gene_risk | 5 | Upper bound for Gene Risk Coefficient Uniform Distribution <br /> **required for gene mode** |
+**Population Stratification with both constant and functional variations coming soon**
 
+## Simulation Playground
+
+[Exploratory Notebook](Example_Simulation_Playground.ipynb) details the custom genotype data creation process for phenotype simulation.
+
+Utilizing randomly generated SNPs for Chromosome 0, the notebooks walks through how to form custom genotype datasets for phenotype simulation. Generated outputs are stored in the Chromosome 0 directory and are used to test the validity of the package.
+
+The command below can be run inside the PACKAGE directoryto create sample data for testing purposes.
+```
+gwas-sim-public phenotype -dp ./ -chr 0 --data_identifier test --prefilter exon --phenotype_experiement_name playground_example
+```

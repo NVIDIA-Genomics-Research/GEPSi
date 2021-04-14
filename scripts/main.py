@@ -26,8 +26,8 @@ def main():
         phenotype_sim = PhenotypeSimulator(args)
         phenotype, data, causal_snps_idx, effect_size, interactive_snps = phenotype_sim.simulate_phenotype()
     elif args.mode == "annotation":
-        gennet_sim = GenNETDataSimulator(args)
-        gennet_sim.clean_annotations(args.features)
+        genotype_sim = GenotypeSimulator(args)
+        genotype_sim.clean_annotations(args.features)
         
 if __name__ == '__main__':
     main()
