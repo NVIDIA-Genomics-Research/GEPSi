@@ -1,7 +1,7 @@
-chr: 21
-data_path: "/DLGWAS/data/"
+chr: 1
+data_path: "/home/dreidenbach/Desktop/gwas/hapgen2/data/"
 data_identifier: "100k"
-phenotype_experiement_name: "test_run"
+phenotype_experiement_name: "full_chr1_run"
 prefilter: "exon"
 interactive_cut: 0.2
 mask_rate: 0.1
@@ -14,3 +14,4 @@ causal_snp_mode: "gene"
 n_causal_snps: 100
 causal_gene_cut: 0.05
 max_gene_risk: 5
+patient_chunk: 20000

@@ -23,9 +23,9 @@ def add_common_options(parser):
         parser : After adding the arguments.
     """
     # Common Arguments
-    parser.add_argument('-chr', dest='chr', required=True, type=int, nargs=None, action = 'store', default=21)
-    parser.add_argument('--data_path', '-dp', dest='data_path', required=True, type=str, nargs=None, action = 'store', default="/DLGWAS/data/")
-    parser.add_argument('--data_identifier','-data', dest='data_identifier', required=True, type=str, nargs=None, action = 'store', default= "100k")
+    parser.add_argument('--chromosome','-chr', dest='chr', required=False, type=int, nargs=None, action = 'store', default=0)
+    parser.add_argument('--data_path', '-dp', dest='data_path', required=False, type=str, nargs=None, action = 'store', default="/DLGWAS/data/")
+    parser.add_argument('--data_identifier','-data', dest='data_identifier', required=False, type=str, nargs=None, action = 'store', default= "10k")
     
 def add_annotation_options(parser):
     """Add model options to the parser.
@@ -63,11 +63,11 @@ def add_phenotype_options(parser):
     add_common_options(parser)
     parser.add_argument('--phenotype_experiement_name', '-pname', dest='phenotype_experiement_name', type=str, nargs=None, action = 'store', default="")
     parser.add_argument('--prefilter', '-pf', dest='prefilter', type=str, nargs=None, action = 'store', default="exon")
-    parser.add_argument('--interactive_cut', '-cut', dest='interactive_cut', required=True, type=float, nargs=None, action = 'store', default=0.2)
-    parser.add_argument('--mask_rate', '-mask', dest='mask_rate', required=True, type=float, nargs=None, action = 'store', default=0.1)
-    parser.add_argument('--dosage_frac', '-df', dest='dosage_frac', required=True, type=float, nargs=None, action = 'store', default=0.5)
-    parser.add_argument('--max_interaction_coeff', '-mic', dest='max_interaction_coeff', required=True, type=float, nargs=None, action = 'store', default=2)
-    parser.add('--causal_snp_mode', required=True, type=str, choices=['gene', 'random'],help="causal snp generation method")
+    parser.add_argument('--interactive_cut', '-cut', dest='interactive_cut', required=False, type=float, nargs=None, action = 'store', default=0.2)
+    parser.add_argument('--mask_rate', '-mask', dest='mask_rate', required=False, type=float, nargs=None, action = 'store', default=0.1)
+    parser.add_argument('--dosage_frac', '-df', dest='dosage_frac', required=False, type=float, nargs=None, action = 'store', default=0.5)
+    parser.add_argument('--max_interaction_coeff', '-mic', dest='max_interaction_coeff', required=False, type=float, nargs=None, action = 'store', default=2)
+    parser.add('--causal_snp_mode', required=False, type=str, choices=['gene', 'random'],help="causal snp generation method")
     parser.add_argument('--n_causal_snps', '-num_snps', dest='n_causal_snps', type=int, nargs=None, action = 'store', default=100)
     parser.add_argument('--causal_gene_cut', '-cgc', dest='causal_gene_cut', type=float, nargs=None, action = 'store', default=0.05)
     
@@ -75,6 +75,7 @@ def add_phenotype_options(parser):
     parser.add_argument('--heritability', '-hrd', dest='heritability', type=float, nargs=None, action = 'store', default=1)
     parser.add_argument('--phenotype_threshold', '-pthresh', dest='phenotype_threshold', type=float, nargs=None, action = 'store', default=50)
     parser.add_argument('--max_gene_risk', '-mgr', dest='max_gene_risk', type=float, nargs=None, action = 'store', default=5)
+    parser.add_argument('--patient_chunk', '-pc', dest='patient_chunk', type=int, nargs=None, action = 'store', default=100)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
 #     if arguments are required will it error if they are specified in the config self.phenotype_threshold
 
