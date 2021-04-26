@@ -2,7 +2,7 @@
 
 **TODO: Name the Package**
 
-PACKAGE is a toolkit for the simulation of diverse genotypes and phenotypes for GWAS analysis.
+PACKAGE is a toolkit to simulate phenotypes for GWAS analysis, given input genotype data for a population.
 
 ## Installation
 
@@ -38,90 +38,43 @@ Run unit tests to verify that installation was successful
     python -m pytest tests/
     ```
     
-## Data
-Genomewide Data is found here: [1000 Genome Project](https://mathgen.stats.ox.ac.uk/impute/1000GP_Phase3.html) (Note: in older format. HAPGEN2 does not work directly with .vcf input)
-
-[HAPGEN2](https://mathgen.stats.ox.ac.uk/genetics_software/hapgen/hapgen2.html) supplied with 1000 Genome Project data is able to produce variable number of genetic diverse people that will later be used to determine casual SNPs and phenotype. HAPGEN2 was chosen due to its understandable sampling logic as well as focus on retention of ld patterns in input data. It allows us to create populations of any size with SNP allele frequencies found in true data. 
-
-[PLINK](https://www.cog-genomics.org/plink/) is used to filter the genotypes by any combination of features (exon, transcript, or gene) as well as covert to the Minor Allele frequency matrix. This can give as a matrix of people X SNP with the value being 0,1,2 correspodning to the MAF.
-
-The above features are taken from [Gencode Genome Annotations](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz). This gives our mapping of snp postion to features and allows us to annotate our SNP data.
-
-
 ## Workflow
-PACKAGE simulates a diverse genetic population of the desired size given input genotype data for downstream analysis.
 
-### 1. Generating Genotypes
+### 1. Formatting genotype data
 
-Utilized HAPGEN2 to create diverse genotype Controls to be used for the Phenotype simulation of desired population size. Please see HAPGEN2 Documentation for detailed parameter walkthough.
-
-Gencode's hg19 Annotations were used for the Genotype Simulation. Users can download and use PACKAGE's annotation CLI option to read and clean the annotation file. If another form of annotations is to be used make sure that it is a space separated csv file with Columns for the Chromosome, Feature, Start Position, End Position, Feature ID.
-
-![Alt text](./exon_annotation.png?raw=true "Title")
-
-The Simulator can handle features including any combination of exons, transcripts, or genes.
-
-See [Exploratory Notebook](Example_Simulation_Playground.ipynb) for an example of the data manipulations for custom input genotypes as well as package testing.
-
-Here is an example of how we generated 100000 Individuals from the Chromosome 21 using the 1000 Genome Project.
-```
-/hapgen2 \
-       -h /DLGWAS/data/1000GP_Phase3/1000GP_Phase3_chr21.hap \
-       -l /DLGWAS/data/1000GP_Phase3/1000GP_Phase3_chr21.legend \
-       -m /DLGWAS/data/1000GP_Phase3/genetic_map_chr21_combined_b37.txt \
-       -n 100000 100 \
-       -dl 100011 1 1 1 \
-       -o /DLGWAS/data/gensim_chr21_100k.gz \
-       -no_haps_output
-```
-Results in the creation of
-
-    /DLGWAS/data/gensim_chr21_100k.controls.gen.gz
-    /DLGWAS/data/gensim_chr21_100k.sample
-
-Create the filtered annotation via gwas-sim genotype --data_path /DLGWAS/data/ --annotation_name annotations -chr 21 - features exon
-
-    /DLGWAS/data/21_annotations_exon.csv
-
-Utlizie PLINK to filter and format the data into tabular form for down stream compuational analysis.
-```
-cut -f2,4- -d" " ${data_path}21_annotations_${feature_names}.csv | tail -n +2 | sed 's/^chr//' > ${data_path}${feature_names}_ranges_chr21.txt
-# PLINK v1.9
-/plink \
-    --gen ${data_path}gensim_chr21_100k.controls.gen.gz \
-    --sample ${data_path}gensim_chr21_100k.sample \
-	--maf 0.01 \
-	--extract range ${data_path}${feature_names}_ranges_chr21.txt \
-	--allow-no-sex \
-	--snps-only \
-	--write-snplist \
-	--recode A \
-	--oxford-single-chr 21 \
-    --out ${data_path}genotype
-    
-sed -i 's/:/ /g' ${data_path}genotype.snplist
-# Cleanup snplist formatting for downstream usage
-```
-Results in the creation of
-
-    /DLGWAS/data/genotype.raw a Person X SNP Genotype Matrix
-    /DLGWAS/data/genotype.snplist Meta data for each SNP
-
-
-PACKAGE gives us the ability to format the data matrix and associated annotations into a gene mapped annotated csv file.
+Genotype data should be supplied in a `.raw` format along with a `.snplist` file. PACKAGE gives us the ability to format the genotype data matrix and associated annotations into an annotated csv file.
     
 ```
     gwas-sim genotype -chr21 -data_path /DLGWAS/data/ --matrix_name genotype.raw --snplist_name genotype.snplist
 ```
     
-Results in the creation of an annotated matrix. Users are encouraged to use PLINK for their data conversions if not using 1000 Genome Project. PACKAGE provides easy annotation cleaning and genotype data manipulation. Phenotype simulation requires custom pandas dataframe so as long as other formats can be read in via PLINK phenotype simulation is possible.
+Results in the creation of a `.csv` file containing an annotated SNP X Person matrix with Genotype Values of 0,1,2. This data matrix is needed to run the phenotype simulation. 
 
-    /DLGWAS/data/chr21_genotype_100k_exon.csv
-
-chr21_genotype_100k_exon.csv an annotated SNP X Person matrix with Genotype Values of 0,1,2
-
-**This data matrix is needed to run the phenotype simulation**
 ![Alt text](./annotated_matrix_result.png?raw=true "Title")
+
+The `.raw` and `.snplist` files can be produced from other formats using [PLINK](https://www.cog-genomics.org/plink/). PLINK can also be used to filter SNPs within selected regions (exons, transcripts, or genes) as well as filter SNPs based on their allele frequencies. 
+
+For example, we used the following PLINK v1.9 command to filter and format genotype data for human chromosome 21:
+
+```
+/plink \
+  --gen gensim_chr21_100k.controls.gen.gz \
+  --sample gensim_chr21_100k.sample \
+  --maf 0.01 \
+  --extract range <BED file containing exon positions for chr21> \
+  --allow-no-sex \
+  --snps-only \
+  --write-snplist \
+  --recode A \
+  --oxford-single-chr 21 \
+  --out genotype
+    
+```
+Resulting in the creation of
+
+    /DLGWAS/data/genotype.raw: a Person X SNP Genotype Matrix
+    /DLGWAS/data/genotype.snplist: Meta data for each SNP
+
 
 ### 2. Generating Phenotypes
 
@@ -138,28 +91,16 @@ Results in the creation of
     /DLGWAS/data/chr21/chr21_causal_snp_idx_100k_exon_example_name.pkl
     /DLGWAS/data/chr21/chr21_causal_genes_100k_exon_example_name.pkl
     
-**chr21_phenotype_100k_exon_example_name.pkl** a list of binary phenotypes for each person defined by the Genotype Matrix <br />
-**chr21_effect_size_100k_exon_example_name.pkl** is a dictionary with key SNP index and value a list of the dosage dependent effect sizes  <br />
-**chr21_interactive_snps_100k_exon_example_name.pkl** is a dictionary that maps causal snp indexes to a length 3 list [Interactive SNP Index Pair, Interaction Coefficeint, Partner Risk Allele] <br />
-**chr21_causal_snp_idx_100k_exon_example_name.pkl** is a dictionary mapping SNP ID to its mapped Gene Risk <br />
-**chr21_causal_genes_100k_exon_example_name.pkl** is a dictionary mapping Gene Feature ID to Gene Risk Score <br />
+**chr21_phenotype_100k_exon_example_name.pkl**: a list of binary phenotypes for each person defined by the Genotype Matrix <br />
+**chr21_effect_size_100k_exon_example_name.pkl**: a dictionary with key SNP index and value a list of the dosage dependent effect sizes  <br />
+**chr21_interactive_snps_100k_exon_example_name.pkl**: a dictionary that maps causal snp indices to a list of length 3 [Interactive SNP Index Pair, Interaction Coefficient, Partner Risk Allele] <br />
+**chr21_causal_snp_idx_100k_exon_example_name.pkl**: a dictionary mapping SNP ID to its mapped Gene Risk <br />
+**chr21_causal_genes_100k_exon_example_name.pkl**: a dictionary mapping Gene Feature ID to Gene Risk Score <br />
 
 Histograms of the sampling distributions are created and saved for every major statistical choice.
 
-## Results
-**TODO**
-Overview of paper and LINK
 
 ## Parameter Documentation
-
-| Annotation Parameters | Default Value | Definition |
-| ---  | --- | --- |
-| -h --help | None | List all parameters |
-| -dp --data_path | /DLGWAS/data/ | path to 1000 GP Data |
-| -chr | 21 | Chromosome Number |
-| -data --data_identifier | 100k | data size identifier |
-| -ant --annotation_name | gencode.v19.annotation.gtf | Name of Annotations file for gene/exon mapping |
-| -f --features | ["gene", "transcript", "exon"] | List of features for HAPGEN2 filtering |
 
 | Genotype Parameters | Default Value | Definition |
 | ---  | --- | --- |
@@ -168,35 +109,40 @@ Overview of paper and LINK
 | -chr | 21 | Chromosome Number |
 | -data --data_identifier | 100k | data size identifier |
 | -ant --annotation_name | gencode.v19.annotation.gtf | Name of Annotations file for gene/exon mapping |
-| -f --features | ["gene", "transcript", "exon"] | List of features for HAPGEN2 filtering |
-| -mtx --matrix_name | genotype.raw | PLINK Recode A Genotype Matrix (0,1,2) |
-| -snplist --snplist_name | genotype.snplist | PLINK Recode A SNP meta data |
+| -f --features | ["gene", "transcript", "exon"] | List of features for filtering |
+| -mtx --matrix_name | genotype.raw | Genotype Matrix (0,1,2) |
+| -snplist --snplist_name | genotype.snplist | SNP meta data |
 
 
 | Phenotype Parameters | Default Value | Definition |
 | ---  | --- | --- |
 | -h --help | None | List all parameters |
-| -dp --data_path | /DLGWAS/data/ | path to 1000 GP Data |
+| -dp --data_path | /DLGWAS/data/ | path to data |
 | -chr | 21 | Chromosome Number |
-| -hd --heredity | 1 | Heredity coeficient |
+| -hd --heritability | 1 | Heritability of phenotype |
 | -data --data_identifier | 100k | data size identifier |
-| -pname               <br />--phenotype_experiement_name | "" | Name of phenotype simulation experiement |
+| -pname               <br />--phenotype_experiement_name | "" | Name of phenotype simulation experiment |
 | -pf --prefilter | "exon" | feature names of genotype filtering |
-| -cut --interactive_cut | 0.2 | Fraction of Causal SNPS to experience epistatic effects |
-| -mask --mask_rate | 0.1 | Fraction Interaction relations that are masking |
-| -df --dosage_frac | 0.5 | Fraction of Causal SNPS to experience dosage dependent effect size |
-| -mic --max_interaction_coeff | 2 | Upper bound for Interaction Coefficient Uniform Distribution |
-| --causal_snp_mode | "gene" | Phenotype Algorithm Selector {gene, random} |
+| -cut --interactive_cut | 0.2 | Fraction of causal SNPs to experience epistatic effects |
+| -mask --mask_rate | 0.1 | Fraction of inter-SNP interactions that are masking |
+| -df --dosage_frac | 0.5 | Fraction of causal SNPs whose effects are dosage dependent |
+| -mic --max_interaction_coeff | 2 | Upper bound for Interaction Coefficient between two SNPs|
+| --causal_snp_mode | "gene" | Method to select causal SNPs {gene, random} |
 | -num_snps --n_causal_snps | 100 | Number of Causal SNPs <br /> **required for random mode** |
 | -cgc --causal_gene_cut | 0.05 | Fraction of Causal Genes <br /> **required for gene mode** |
-| -mgr --max_gene_risk | 5 | Upper bound for Gene Risk Coefficient Uniform Distribution <br /> **required for gene mode** |
-**Population Stratification with both constant and functional variations coming soon**
+| -mgr --max_gene_risk | 5 | Upper bound for Gene Risk Coefficient <br /> **required for gene mode** |
+
+
+## Results
+**TODO**
+Overview of paper and LINK
+
 
 ## Simulation Playground
 
 [Exploratory Notebook](Example_Simulation_Playground.ipynb) details the custom genotype data creation process for phenotype simulation.
 
-Utilizing randomly generated SNPs for Chromosome 0, the notebooks walks through how to form custom genotype datasets for phenotype simulation. Generated outputs are stored in the Chromosome 0 directory and are used to test the validity of the package.
+Utilizing randomly generated SNPs, the notebook walks through how to form custom genotype datasets for phenotype simulation. Generated outputs are stored in the Chromosome 0 directory and are used to test the validity of the package.
 
 The command below can be run inside the PACKAGE directoryto create sample data for testing purposes.
 ```
