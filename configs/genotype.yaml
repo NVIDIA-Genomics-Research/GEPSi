@@ -13,5 +13,7 @@ data_path: "/DLGWAS/data/"
 data_identifier: "100k"
 annotation_name: "gencode.v19.annotation.gtf"
 features: ["gene", "transcript", "exon"] 
-matrix_name: "snp_matrix"
-snplist_name: "snp_list"
+matrix_name: "snp_matrix.raw"
+snplist_name: "snp_list.bim"
+ignore_gene_map: False
+separator: "\t"

@@ -68,8 +68,8 @@ required_packages = \
     )
 
 
-setup(name='gwas-sim-public',
-      description='NVIDIA GWAS Simulation libraries and utiliites',
+setup(name='geps',
+      description='NVIDIA  GWAS Epistatic Phenotype Simulator',
       author='NVIDIA Corporation',
       url="https://github.com/clara-parabricks/gwas-data-simulation-public",
       include_package_data=True,
@@ -79,7 +79,7 @@ setup(name='gwas-sim-public',
       long_description='Python libraries and utilities for manipulating '
                        'genomics data',
       classifiers=pyaw_classifiers,
-      entry_points={'console_scripts': ['gwas-sim-public = scripts.main:main']},
+      entry_points={'console_scripts': ['geps = scripts.main:main']},
       data_files=[
           ('configs', ['configs/genotype.yaml',
                        'configs/phenotype.yaml'])],
