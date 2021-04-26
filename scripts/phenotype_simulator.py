@@ -86,7 +86,7 @@ class PhenotypeSimulator():
         scores = (scores - np.mean(scores))/np.std(scores)
         #Apply g' = h*g + k*sqrt(1-h^2)*N(0,1)
         phenotype_scores = self.heritability * scores + self.noise_scalar*np.random.randn(len(scores)) * np.sqrt(1 - self.heritability * self.heritability)
-        self.get_distribution(phenotype_scores, title = "Chr {} Phenotype Scores with Heredity {}".format(self.chr, self.heritability), ylabel="Number of People", xlabel="Genetic Risk Score")
+        self.get_distribution(phenotype_scores, title = "Chr {} Phenotype Scores with Heritability {}".format(self.chr, self.heritability), ylabel="Number of People", xlabel="Genetic Risk Score")
         return phenotype_scores
     
     def patient_level_score_injection(self, scores, patients, coefficients):
