@@ -24,7 +24,7 @@ def main():
         data = genotype_sim.simulate_genotype()
     elif args.mode == "phenotype":
         phenotype_sim = PhenotypeSimulator(args)
-        phenotype, data, causal_snps_idx, effect_size, interactive_snps = phenotype_sim.simulate_phenotype()
+        phenotype, causal_snps_idx, effect_size, interactive_snps = phenotype_sim.simulate_phenotype()
     elif args.mode == "annotation":
         genotype_sim = GenotypeSimulator(args)
         genotype_sim.clean_annotations(args.features)

@@ -55,7 +55,6 @@ pyaw_classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Natural Language :: English",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
@@ -69,18 +68,18 @@ required_packages = \
     )
 
 
-setup(name='gwas-sim-public',
-      description='NVIDIA GWAS Simulation libraries and utiliites',
+setup(name='geps',
+      description='NVIDIA  GWAS Epistatic Phenotype Simulator',
       author='NVIDIA Corporation',
       url="https://github.com/clara-parabricks/gwas-data-simulation-public",
       include_package_data=True,
       install_requires=required_packages,
       packages=find_namespace_packages(),
-      python_requires='>=3.5',
+      python_requires='>=3.6',
       long_description='Python libraries and utilities for manipulating '
                        'genomics data',
       classifiers=pyaw_classifiers,
-      entry_points={'console_scripts': ['gwas-sim-public = scripts.main:main']},
+      entry_points={'console_scripts': ['geps = scripts.main:main']},
       data_files=[
           ('configs', ['configs/genotype.yaml',
                        'configs/phenotype.yaml'])],

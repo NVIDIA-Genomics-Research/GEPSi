@@ -23,9 +23,8 @@ def add_common_options(parser):
         parser : After adding the arguments.
     """
     # Common Arguments
-    parser.add_argument('-chr', dest='chr', required=True, type=int, nargs=None, action = 'store', default=21)
-    parser.add_argument('--data_path', '-dp', dest='data_path', required=True, type=str, nargs=None, action = 'store', default="/DLGWAS/data/")
-    parser.add_argument('--data_identifier','-data', dest='data_identifier', required=True, type=str, nargs=None, action = 'store', default= "100k")
+    parser.add_argument('--data_path', '-dp', dest='data_path', required=False, type=str, nargs=None, action = 'store', default="/GWAS/data/")
+    parser.add_argument('--data_identifier','-data', dest='data_identifier', required=False, type=str, nargs=None, action = 'store', default= "file_name")
     
 def add_annotation_options(parser):
     """Add model options to the parser.
@@ -50,7 +49,12 @@ def add_genotype_options(parser):
     parser.add_argument('--annotation_name', '-ant', dest='annotation_name', required=False, type=str, nargs=None, action = 'store', default="gencode.v19.annotation.gtf")
     parser.add_argument('--features', '-f', dest='features', required=False, type=str, nargs="+", action = 'store', default=["gene", "transcript", "exon"])
     parser.add_argument('--matrix_name', '-mtx', dest='matrix_name', required=False, type=str, nargs=None, action = 'store', default="genotype.raw")
+    parser.add_argument("--risk_rare",'-rr', default=False, action="store_true", help="Flag to use rare allele as risk allele")
+    parser.add_argument("--ignore_gene_map",'-ign_map', default=False, action="store_true", help="Flag to ignore the creation of a gene map")
     parser.add_argument('--snplist_name', '-snplist', dest='snplist_name', required=False, type=str, nargs=None, action = 'store', default="genotype.snp_list")
+    parser.add_argument('--memory_cautious', '-low_mem', dest='memory_cautious', default=False, action="store_true", help="Flag to use a batched readin of genotype matrix")
+    parser.add_argument('--separator', '-sep', dest='separator', required=False, type=str, nargs=None, action = 'store', default="\t")
+    parser.add_argument('--matrix_chunk_size', '-chunk', dest='matrix_chunk_size', type=int, nargs=None, action = 'store', default=1000)        
     parser.add('--config', required=False, is_config_file=True, help='config file path')
 
 def add_phenotype_options(parser):
@@ -62,21 +66,20 @@ def add_phenotype_options(parser):
     """
     add_common_options(parser)
     parser.add_argument('--phenotype_experiement_name', '-pname', dest='phenotype_experiement_name', type=str, nargs=None, action = 'store', default="")
-    parser.add_argument('--prefilter', '-pf', dest='prefilter', type=str, nargs=None, action = 'store', default="exon")
-    parser.add_argument('--interactive_cut', '-cut', dest='interactive_cut', required=True, type=float, nargs=None, action = 'store', default=0.2)
-    parser.add_argument('--mask_rate', '-mask', dest='mask_rate', required=True, type=float, nargs=None, action = 'store', default=0.1)
-    parser.add_argument('--dosage_frac', '-df', dest='dosage_frac', required=True, type=float, nargs=None, action = 'store', default=0.5)
-    parser.add_argument('--max_interaction_coeff', '-mic', dest='max_interaction_coeff', required=True, type=float, nargs=None, action = 'store', default=2)
-    parser.add('--causal_snp_mode', required=True, type=str, choices=['gene', 'random'],help="causal snp generation method")
+    parser.add_argument('--interactive_cut', '-cut', dest='interactive_cut', required=False, type=float, nargs=None, action = 'store', default=0.2)
+    parser.add_argument('--mask_rate', '-mask', dest='mask_rate', required=False, type=float, nargs=None, action = 'store', default=0.1)
+    parser.add_argument('--dominance_frac', '-df', dest='dominance_frac', required=False, type=float, nargs=None, action = 'store', default=0.1)
+    parser.add_argument('--recessive_frac', '-rf', dest='recessive_frac', required=False, type=float, nargs=None, action = 'store', default=0.1)
+    parser.add_argument('--max_interaction_coeff', '-mic', dest='max_interaction_coeff', required=False, type=float, nargs=None, action = 'store', default=2)
+    parser.add('--causal_snp_mode', required=False, type=str, choices=['gene', 'random'],help="causal snp generation method")
     parser.add_argument('--n_causal_snps', '-num_snps', dest='n_causal_snps', type=int, nargs=None, action = 'store', default=100)
     parser.add_argument('--causal_gene_cut', '-cgc', dest='causal_gene_cut', type=float, nargs=None, action = 'store', default=0.05)
     
-    parser.add_argument('--noise_scalar', '-noise', dest='noise_scalar', type=float, nargs=None, action = 'store', default=1)
     parser.add_argument('--heritability', '-hrd', dest='heritability', type=float, nargs=None, action = 'store', default=1)
     parser.add_argument('--phenotype_threshold', '-pthresh', dest='phenotype_threshold', type=float, nargs=None, action = 'store', default=50)
     parser.add_argument('--max_gene_risk', '-mgr', dest='max_gene_risk', type=float, nargs=None, action = 'store', default=5)
+    parser.add_argument('--patient_chunk', '-pc', dest='patient_chunk', type=int, nargs=None, action = 'store', default=100)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
-#     if arguments are required will it error if they are specified in the config self.phenotype_threshold
 
 def parse_args(root_dir):
     """Parse command line arguments.
@@ -89,7 +92,7 @@ def parse_args(root_dir):
     parser = configargparse.ArgParser()
     subparsers = parser.add_subparsers(dest="mode")
     # =========================================================================
-    # model args
+    # annotation args
     annotation_config_path = os.path.join(root_dir, 'configs', 'genotype.yaml')
     parser_annotation = subparsers.add_parser(
         'annotation',
@@ -107,7 +110,6 @@ def parse_args(root_dir):
     # =========================================================================
     # phenotype args
     pheno_config_path = os.path.join(root_dir, 'configs', 'phenotype.yaml')
-#     should we have nested subparsers?
     parser_pheno = subparsers.add_parser(
         'phenotype',
         config_file_parser_class=configargparse.YAMLConfigFileParser,
@@ -115,5 +117,44 @@ def parse_args(root_dir):
     add_phenotype_options(parser_pheno)
     # =========================================================================
     args, extra = parser.parse_known_args()
+#     if args.mode == "genotype":
+#         # check genotype params   
+    if args.mode == "phenotype":
+        params = {
+            "interactive_cut":args.interactive_cut,
+            "mask_rate":args.mask_rate,
+            "dominance_frac":args.dominance_frac,
+            "recessive_frac":args.recessive_frac,
+            "dosage_frac": 1 - args.dominance_frac - args.recessive_frac,
+            "heritability":args.heritability }
+        validate_parameters(params, case = 0)
+        if args.causal_snp_mode == "random":
+             params = {
+                "max_interaction_coeff":args.max_interaction_coeff,
+                "phenotype_threshold":args.phenotype_threshold,
+                "n_causal_snps":args.n_causal_snps,
+                "patient_chunk":args.patient_chunk }
+        if args.causal_snp_mode == "gene":
+            params = {
+                "max_interaction_coeff":args.max_interaction_coeff,
+                "phenotype_threshold":args.phenotype_threshold,
+                "causal_gene_cut":args.causal_gene_cut,
+                "max_gene_risk":args.max_gene_risk,
+                "patient_chunk":args.patient_chunk }
+        validate_parameters(params, case = 1)
+        
+#     elif args.mode == "annotation":
+#         #check annotation params
 
     return args
+
+def validate_parameters(params, case):
+    if case == 0:
+        for name, param in params.items():
+            if param < 0 or param > 1:
+                raise ValueError('Invalid value for {}. Acceptible values [0,1]'.format(name))
+    elif case == 1:
+        for name, param in params.items():
+            if param <= 0:
+                raise ValueError('Invalid value for {}. Acceptible values > 0'.format(name)) 
+        
