@@ -33,26 +33,19 @@ class PhenotypeSimulator():
             self.max_gene_risk = args.max_gene_risk 
         
     def get_number_patients(self):
-        #known to have 6 metadata columns: Chromosome, Position, Allele 1, Allele 2, Risk Allele, Feature ID
-        df = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", nrows=1)
-        self.num_patients = df.shape[1]-6
+        h5file = tables.open_file(self.data_path + "genotype_{}.h5".format(self.data_identifier), "r")
+        self.num_patients = h5file.root.data.shape[0]
         return self.num_patients
                          
-    def get_person(self, person):
-        if type(person) == list:
-            patient = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", usecols=[str(pear) for pear in person])
-        else:
-            patient = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", usecols=[str(person)])
-        return patient
-
     def read_genotype_data(self):
         """
         Reads in the annotated genotype csv file.
         """
-        df = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", usecols=['Risk Allele','Feature ID'], dtype={'Feature ID': object})
+        df = pd.read_csv(self.data_path + "snplist_{}.csv".format(self.data_identifier), sep=" ", usecols=['Risk Allele','Feature ID'], dtype={'Feature ID': object})
         df['Feature ID'] = df['Feature ID'].apply(lambda x: json.loads(x) if type(x) == str else x)
         self.risk_alleles = df['Risk Allele'].to_list()
         self.feature_id = df['Feature ID'].to_list()
+        self.num_snps = len(self.risk_alleles)
         print("SNPs: {} People: {}".format(len(self.risk_alleles), self.get_number_patients()))
         return self.risk_alleles, self.feature_id
     
@@ -101,7 +94,7 @@ class PhenotypeSimulator():
         scores = (scores - np.mean(scores))/np.std(scores)
         #Apply g' = h*g + sqrt(1-h^2)*N(0,1)
         phenotype_scores = self.heritability * scores + np.random.randn(len(scores)) * np.sqrt(1 - self.heritability * self.heritability)
-        self.get_distribution(phenotype_scores, title = "Phenotype Scores with Heredity {}".format(self.heritability), ylabel="Number of People", xlabel="Genetic Risk Score")
+        self.get_distribution(phenotype_scores, title = "Phenotype Scores with Heredity {} {}".format(self.heritability, self.phenotype_experiement_name), ylabel="Number of People", xlabel="Genetic Risk Score")
         return phenotype_scores
     
     def patient_level_score_injection(self, scores, patients, coefficients):
@@ -153,7 +146,7 @@ class PhenotypeSimulator():
             interaction.append(self.risk_alleles[partner])
             interactive_snps[idx] = interaction
         self.save_file("interactive_snps", interactive_snps)
-        self.get_distribution(coeff, title = "{} Interactive Coefficients".format(self.data_identifier), ylabel="Number of SNPs", xlabel="Interaction Coefficients")
+        self.get_distribution(coeff, title = "{} Interactive Coefficients".format(self.phenotype_experiement_name), ylabel="Number of SNPs", xlabel="Interaction Coefficients")
         return interactive_snps
 
     def get_score(self, person, effect_size, interactive_snps):
@@ -162,7 +155,7 @@ class PhenotypeSimulator():
 
         Parameters
         ----------
-        person: Person column of Genotype file
+        person: Person row of Genotype file
         effect_size: Dictionary that maps causal snp indexes to length 3 list that has the effect size per genotyple value {0, 1, 2} accesed via index
         interactive_snps: Dictionary that maps causal snp indexes to a length 3 list [Interactive SNP Index Pair, Interaction Coefficeint, Partner Risk Allele]
 
@@ -186,13 +179,9 @@ class PhenotypeSimulator():
         """
          Parameters
         ----------
-        data: Dataframe that can be supplied directly from generate_genotype_file
         effect_size: Dictionary that maps causal snp indexes to length 3 list that has the effect size per genotyple value {0, 1, 2} accesed via index
         interactive_snps: Dictionary that maps causal snp indexes to a length 2 list [Interactive SNP Index Pair, Interaction Coefficeint]
-        causal_snps_idx: List of SNP indices that are chosen as the causal SNPs
-        cut: Fraction of causal SNPs to have an interacting pair
-        mask_rate: Fraction of interactive realtions that are masking
-        max_interaction_coeff: Upper bound of Uniform Distribution for interaction coefficient Sampling
+        causal_snps_idx: Dictionary of SNP indices that are chosen as the causal SNPs to gene risk coefficients if present.
 
         Results
         -------
@@ -200,22 +189,13 @@ class PhenotypeSimulator():
         Returns the calculated phenotype scores.
         """
         interactive_snps =  self.gen_snp_interaction(causal_snps_idx)
-        num_patients = self.get_number_patients()
-        pheno_scores = []
-        for patient in range(0, num_patients,  self.patient_chunk):
-            patient_list = list(range(patient, patient + self.patient_chunk))
-            patients = self.get_person(patient_list)
-            inner_pheno_scores = [self.get_score(patients[str(person)].to_list(), effect_size, interactive_snps) for person in patient_list]
-            pheno_scores.extend(inner_pheno_scores)
-        if num_patients % self.patient_chunk != 0:
-            patient_list = list(range(num_patients-(num_patients % self.patient_chunk), num_patients))
-            patients = self.get_person(patient_list)
-            inner_pheno_scores = [self.get_score(patients[str(person)].to_list(), effect_size, interactive_snps) for person in patient_list]
-            pheno_scores.extend(inner_pheno_scores)
-        self.get_distribution(pheno_scores, title = "{} Phenotype Scores".format(self.data_identifier), ylabel="Number of People", xlabel="Genetic Risk Score")
-        print(len(pheno_scores), "Phenotype scores")
+        h5file = tables.open_file(self.data_path + "genotype_{}.h5".format(self.data_identifier), "r")
+        patients = h5file.root.data
+        pheno_scores = [self.get_score(patients[idx,:], effect_size, interactive_snps) for idx in patients.shape[0]]                        
+        self.get_distribution(pheno_scores, title = "{} Phenotype Scores".format(self.phenotype_experiement_name), ylabel="Number of People", xlabel="Genetic Risk Score")
+        print(len(pheno_scores), "Phenotype Scores")
         return pheno_scores, interactive_snps
-    
+                                  
     def simulate_causal_snps_random(self):
         """
         Simulates causal SNP selection and generates effect sizes
@@ -234,7 +214,7 @@ class PhenotypeSimulator():
         Returns the data, the effect_size dictionary, list of causal snp indices
         """
         self.read_genotype_data()
-        possible_snps = range(self.risk_alleles.shape[0])
+        possible_snps = list(range(len(self.risk_alleles)))
         causal_snps_id = np.random.choice(possible_snps, size = self.n_causal_snps, replace=False)
         causal_snps_idx = {idx: 1 for idx in causal_snps_id}
         effect_size = self.simulate_effect_sizes(causal_snps_idx)

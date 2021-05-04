@@ -46,9 +46,7 @@ Genotype data should be supplied in a `.raw` format along with a `.bim` snplist 
     geps genotype -data_path /GWAS/data/chr21/ --matrix_name genotype.raw --snplist_name full_snplist.bim
 ```
     
-Results in the creation of a `.csv` file containing an annotated SNP X Person matrix with Genotype Values of 0,1,2. This data matrix is needed to run the phenotype simulation. The data matrix has columns for Chromosome, Feature ID, Position, Allele 1, Allele 2, and Risk Allele. 
-
-![Alt text](./annotated_matrix_result.png?raw=true "Title")
+Results in the creation of a `.h5` file containing a Person X SNP matrix with Genotype Values of 0,1,2 and and annotated snplist `.csv` that is needed to run the phenotype simulation. The snplist has columns for Chromosome, Feature ID, Position, Allele 1, Allele 2, and Risk Allele. 
 
 The `.raw` and `.bim` files can be produced from other formats using [PLINK](https://www.cog-genomics.org/plink/). PLINK can also be used to filter SNPs within selected regions (exons, transcripts, or genes) as well as filter SNPs based on their allele frequencies. 
 
@@ -62,7 +60,6 @@ For example, we used the following PLINK v1.9 command to filter and format genot
   --extract range <BED file containing exon positions for chr21> \
   --allow-no-sex \
   --snps-only \
-  --write-snplist \
   --recode A \
   --oxford-single-chr 21 \
   --out genotype

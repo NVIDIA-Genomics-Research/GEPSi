@@ -9,6 +9,7 @@ import pandas as pd
 import pyranges as pr
 import scipy
 import scipy.sparse
+import tables
 import tqdm
 
 class GenotypeSimulator():
@@ -26,7 +27,6 @@ class GenotypeSimulator():
         self.matrix_chunk_size = args.matrix_chunk_size
         self.separator = args.separator
         
-
     def simulate_genotype(self):
         print("Simulating Genotypes")
         return self.generate_genotype_file()
@@ -81,33 +81,32 @@ class GenotypeSimulator():
         Saves the resutling file to be used for Modeling + Analysis
         """
         print("Generating Genotype Files")
-        data, risk_alleles = self.script_result_clean()
-        data.insert(4, column = "Risk Allele", value = risk_alleles)
-        data['Position'] = data['Position'].apply(lambda x: json.loads(x) if type(x) == str else x) # data type conversion str to int
-        data.insert(5, "Feature ID", [-1]*data.shape[0])
+        sf, risk_alleles = self.script_result_clean()
+        sf.insert(5, column = "Risk Allele", value = risk_alleles)
+        sf['Position'] = sf['Position'].apply(lambda x: json.loads(x) if type(x) == str else x) # data type conversion str to int
+        sf.insert(6, "Feature ID", [-1]*data.shape[0])
         if not self.ignore_gene_map:
-            data["Feature ID"] = data["Feature ID"].astype('object') #so we can use lists
+            sf["Feature ID"] = sf["Feature ID"].astype('object') #so we can use lists
             ant_result_name = "annotations_{}.csv".format(feature_map)
             if not os.path.isfile(self.data_path + ant_result_name):
                 annotations = self.clean_annotations([feature_map])
             else:
                 annotations = pd.read_csv(self.data_path + ant_result_name, sep=" ")
-            gene_map = self.get_feature_map(data, annotations, feature = feature_map)
+            gene_map = self.get_feature_map(sf, annotations, feature = feature_map)
             for snp_id in range(data.shape[0]):
                 genes = gene_map[snp_id]
                 if len(genes) == 1:
-                    data.at[snp_id, "Feature ID"] = genes[0]
+                    sf.at[snp_id, "Feature ID"] = genes[0]
                 else:
-                     data.at[snp_id, "Feature ID"] = genes
-        data.to_csv(self.data_path + "genotype_{}_{}.csv".format(self.data_identifier, self.gfilter), sep=" ", index_label=False)                   
-        print("Saved Result {}".format(self.data_path + "genotype_{}_{}.csv".format(self.data_identifier, self.gfilter)))     
+                     sf.at[snp_id, "Feature ID"] = genes
+        sf.to_csv(self.data_path + "snplist_{}_{}.csv".format(self.data_identifier, self.gfilter), sep=" ", index_label=False)
         return data
     
     def load_dtypes(self):
         subprocess.check_call("head -n 1 {} > {}".format(self.data_path + self.matrix_name, self.data_path + "matrix_header.txt"), shell=True)
-        header = pd.read_csv(self/data_path +"matrix_header.txt", sep=self.separator, header = None)
+        header = pd.read_csv(self.data_path +"matrix_header.txt", sep=self.separator, header = None)
         types = [object, object]
-        types += [float]*(header.shape[1]-2)
+        types += [int]*(header.shape[1]-2)
         dtypes = {}
         for name, typ in zip(header.iloc[0], types):
             dtypes["{}".format(name)] = typ
@@ -124,22 +123,30 @@ class GenotypeSimulator():
             tp = pd.read_csv(self.data_path + self.matrix_name, iterator=True, sep=self.separator, chunksize=self.matrix_chunk_size, dtype=dtypes)
             df = pd.concat(tp, ignore_index=True)
         else:
-            df = pd.read_csv(self.data_path + self.matrix_name,  sep=self.separator, dtype=dtypes) #what is the separator of a .raw??? the onco was\t and the hapgen was space
+            df = pd.read_csv(self.data_path + self.matrix_name,  sep=self.separator, dtype=dtypes) #w
         print(df.head())
         df.drop(['IID', 'FID', 'PAT', 'MAT', 'SEX', 'PHENOTYPE'], axis = 1, inplace = True)
+        data = df.to_numpy()
+        num_pat = data.shape[0]
+        num_feat = data.shape[1]
+        print("Genotype snps and patients", num_feat, num_pat)
+        f = tables.open_file(self.data_path + "genotype_{}_{}.h5".format(self.data_identifier, self.gfilter), mode='w')
+        array_c = f.create_earray(f.root, 'data', tables.IntCol(), (0,num_feat ), expectedrows=num_pat,filters=tables.Filters(complib='zlib', complevel=1))
+        f.close()
+        f = tables.open_file(self.data_path + "genotype_{}_{}.h5".format(self.data_identifier, self.gfilter), mode='a')
+        for pat in tqdm.tqdm(range(num_pat)):
+            a = data[pat,:]
+            a=np.reshape(a, (1,-1))
+            f.root.data.append(a)
+        f.close()
         if self.risk_rare:
             risk_alleles = [1 if df.iloc[:,idx].value_counts().to_list()[0] > df.shape[0]//2 else 0 for idx in range(df.shape[1])]
         else:
             risk_alleles = [1 for idx in range(df.shape[1])]
-        df = df.transpose()
-        df.reset_index(drop=True, inplace=True)
         sf = pd.read_csv(self.data_path + self.snplist_name, sep=self.separator, header = None)
-        sf.drop(sf.columns[list(range(1,3))], inplace = True, axis=1) # drop the variant ID and centimorgan value
-        sf.columns = ['CHR','Position', 'Allele 1', 'Allele 2']
-        data = pd.concat([sf, df], axis = 1)
-        print("Combined Script Results", data.shape)
-        print(data.head())
-        return data, risk_alleles
+        sf.drop(sf.columns[[2]], inplace = True, axis=1) # drop centimorgan value
+        sf.columns = ['CHR','ID','Position', 'Allele 1', 'Allele 2']
+        return sf, risk_alleles
     
     def get_feature_map(self, data, annotations, feature = "gene"):
         """
