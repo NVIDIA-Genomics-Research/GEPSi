@@ -64,7 +64,6 @@ For example, we used the following PLINK v1.9 command to filter and format genot
   --snps-only \
   --write-snplist \
   --recode A \
-  --oxford-single-chr 21 \
   --out genotype
   
 /plink \

@@ -105,7 +105,7 @@ class GenotypeSimulator():
     
     def load_dtypes(self):
         subprocess.check_call("head -n 1 {} > {}".format(self.data_path + self.matrix_name, self.data_path + "matrix_header.txt"), shell=True)
-        header = pd.read_csv(self/data_path +"matrix_header.txt", sep=self.separator, header = None)
+        header = pd.read_csv(self.data_path +"matrix_header.txt", sep=self.separator, header = None)
         types = [object, object]
         types += [float]*(header.shape[1]-2)
         dtypes = {}

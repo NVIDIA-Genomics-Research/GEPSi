@@ -234,7 +234,7 @@ class PhenotypeSimulator():
         Returns the data, the effect_size dictionary, list of causal snp indices
         """
         self.read_genotype_data()
-        possible_snps = range(self.risk_alleles.shape[0])
+        possible_snps = list(range(len(self.risk_alleles)))
         causal_snps_id = np.random.choice(possible_snps, size = self.n_causal_snps, replace=False)
         causal_snps_idx = {idx: 1 for idx in causal_snps_id}
         effect_size = self.simulate_effect_sizes(causal_snps_idx)
