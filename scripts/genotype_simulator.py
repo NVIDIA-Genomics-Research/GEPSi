@@ -1,3 +1,12 @@
+#
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+#
 import json
 import os
 import pickle
@@ -28,7 +37,6 @@ class GenotypeSimulator():
         self.separator = args.separator
         
     def simulate_genotype(self):
-        print("Simulating Genotypes")
         return self.generate_genotype_file()
 
     def clean_annotations(self, features = ["gene", "transcript", "exon"] ):
@@ -80,11 +88,10 @@ class GenotypeSimulator():
         Generates and applies Gene Mapping.
         Saves the resutling file to be used for Modeling + Analysis
         """
-        print("Generating Genotype Files")
         sf, risk_alleles = self.script_result_clean()
         sf.insert(5, column = "Risk Allele", value = risk_alleles)
         sf['Position'] = sf['Position'].apply(lambda x: json.loads(x) if type(x) == str else x) # data type conversion str to int
-        sf.insert(6, "Feature ID", [-1]*data.shape[0])
+        sf.insert(6, "Feature ID", [-1]*sf.shape[0])
         if not self.ignore_gene_map:
             sf["Feature ID"] = sf["Feature ID"].astype('object') #so we can use lists
             ant_result_name = "annotations_{}.csv".format(feature_map)
@@ -93,61 +100,93 @@ class GenotypeSimulator():
             else:
                 annotations = pd.read_csv(self.data_path + ant_result_name, sep=" ")
             gene_map = self.get_feature_map(sf, annotations, feature = feature_map)
-            for snp_id in range(data.shape[0]):
+            for snp_id in range(sf.shape[0]):
                 genes = gene_map[snp_id]
                 if len(genes) == 1:
                     sf.at[snp_id, "Feature ID"] = genes[0]
                 else:
                      sf.at[snp_id, "Feature ID"] = genes
         sf.to_csv(self.data_path + "snplist_{}_{}.csv".format(self.data_identifier, self.gfilter), sep=" ", index_label=False)
-        return data
+        print("Success!")
+        return sf
     
     def load_dtypes(self):
+        """
+        Parse through header of RAW file to assign dtypes to decrease memory consuption of Pandas calls.
+        """
         subprocess.check_call("head -n 1 {} > {}".format(self.data_path + self.matrix_name, self.data_path + "matrix_header.txt"), shell=True)
         header = pd.read_csv(self.data_path +"matrix_header.txt", sep=self.separator, header = None)
-        types = [object, object]
+        types = [str, str]
         types += [int]*(header.shape[1]-2)
         dtypes = {}
         for name, typ in zip(header.iloc[0], types):
             dtypes["{}".format(name)] = typ
+        if self.memory_cautious: # if memory cautious we read in the first column to give us our number of patients
+            header = pd.read_csv(self.data_path + self.matrix_name, sep=self.separator, usecols=[0])
+            self.num_patients = header.shape[0]
         return dtypes
     
     def script_result_clean(self):
         """
-        Results
-        -------
-        Matrix name is a person X SNP matrix. Note input snplist must have same order as raw file.
+        Matrix name is a person X SNP RAW file. Note input snplist must have same order as raw file.
+        Load in the RAW file and convert it to H5 format for Phenotype Simulation.
+        Load in snplist and prepare for augmentation.
         """
         dtypes = self.load_dtypes()
-        if self.memory_cautious:
-            tp = pd.read_csv(self.data_path + self.matrix_name, iterator=True, sep=self.separator, chunksize=self.matrix_chunk_size, dtype=dtypes)
-            df = pd.concat(tp, ignore_index=True)
-        else:
-            df = pd.read_csv(self.data_path + self.matrix_name,  sep=self.separator, dtype=dtypes) #w
-        print(df.head())
-        df.drop(['IID', 'FID', 'PAT', 'MAT', 'SEX', 'PHENOTYPE'], axis = 1, inplace = True)
-        data = df.to_numpy()
-        num_pat = data.shape[0]
-        num_feat = data.shape[1]
-        print("Genotype snps and patients", num_feat, num_pat)
-        f = tables.open_file(self.data_path + "genotype_{}_{}.h5".format(self.data_identifier, self.gfilter), mode='w')
-        array_c = f.create_earray(f.root, 'data', tables.IntCol(), (0,num_feat ), expectedrows=num_pat,filters=tables.Filters(complib='zlib', complevel=1))
-        f.close()
+        num_feat = len(dtypes) - 6
         f = tables.open_file(self.data_path + "genotype_{}_{}.h5".format(self.data_identifier, self.gfilter), mode='a')
-        for pat in tqdm.tqdm(range(num_pat)):
-            a = data[pat,:]
-            a=np.reshape(a, (1,-1))
-            f.root.data.append(a)
-        f.close()
-        if self.risk_rare:
-            risk_alleles = [1 if df.iloc[:,idx].value_counts().to_list()[0] > df.shape[0]//2 else 0 for idx in range(df.shape[1])]
+        risk_alleles = []
+        
+        if self.memory_cautious:
+            array_c = f.create_earray(f.root, 'data', tables.IntCol(), (0,num_feat), expectedrows=self.num_patients,filters=tables.Filters(complib='zlib', complevel=1))
+            for df in pd.read_csv(self.data_path + self.matrix_name, iterator=True, sep=self.separator, chunksize=self.matrix_chunk_size, dtype=dtypes):
+                df.drop(['IID', 'FID', 'PAT', 'MAT', 'SEX', 'PHENOTYPE'], axis = 1, inplace = True)
+                self.h5_append(df,f)
+                if self.risk_rare:
+                    if len(risk_alleles) == 0:
+                        risk_alleles = [[] for _ in range(df.shape[1])]
+                    for idx in range(df.shape[1]):
+                        val = 0
+                        if df.iloc[:,idx].value_counts().to_list()[0] > df.shape[0]//2:
+                            val = 1
+                        risk_alleles[idx].append(val)
+                else:
+                    risk_alleles = [1 for idx in range(df.shape[1])]
+            if self.risk_rare:
+                for idx in range(len(risk_alleles)):
+                    total = sum(risk_alleles[idx])
+                    if total >= len(risk_alleles[idx]) // 2:
+                        risk_alleles[idx] = 1
+                    else:
+                        risk_alleles[idx] = 0              
         else:
-            risk_alleles = [1 for idx in range(df.shape[1])]
+            df = pd.read_csv(self.data_path + self.matrix_name,  sep=self.separator, dtype=dtypes)
+            df.drop(['IID', 'FID', 'PAT', 'MAT', 'SEX', 'PHENOTYPE'], axis = 1, inplace = True)
+            num_pat = df.shape[0]
+            num_feat = df.shape[1]
+            array_c = f.create_earray(f.root, 'data', tables.IntCol(), (0,num_feat), expectedrows=num_pat,filters=tables.Filters(complib='zlib', complevel=1))
+            self.h5_append(df,f)
+            if self.risk_rare:
+                risk_alleles = [1 if df.iloc[:,idx].value_counts().to_list()[0] > df.shape[0]//2 else 0 for idx in range(df.shape[1])]
+            else:
+                risk_alleles = [1 for idx in range(df.shape[1])]
+            
+        f.close()   
         sf = pd.read_csv(self.data_path + self.snplist_name, sep=self.separator, header = None)
-        sf.drop(sf.columns[[2]], inplace = True, axis=1) # drop centimorgan value
-        sf.columns = ['CHR','ID','Position', 'Allele 1', 'Allele 2']
+        sf.drop(sf.columns[[2]], inplace = True, axis=1) # drop centimorgan value of .bim format
+        sf.columns = ['Chromosome','ID','Position', 'Allele 1', 'Allele 2']
         return sf, risk_alleles
     
+    def h5_append(self, df, f):
+        """
+        vectorize and append dataframe 1 patient at a time
+        """
+        num_pat = df.shape[0]
+        for pat in tqdm.tqdm(range(num_pat)):
+            a = df.iloc[pat,:].to_numpy()
+            a=np.reshape(a, (1,-1))
+            f.root.data.append(a)
+            
     def get_feature_map(self, data, annotations, feature = "gene"):
         """
         Creates a Gene map or list of all genes a SNP at a specific position falls into

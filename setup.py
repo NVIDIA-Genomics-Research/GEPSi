@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #
 # Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
 #
@@ -71,7 +69,7 @@ required_packages = \
 setup(name='geps',
       description='NVIDIA  GWAS Epistatic Phenotype Simulator',
       author='NVIDIA Corporation',
-      url="https://github.com/clara-parabricks/gwas-data-simulation-public",
+      url="https://github.com/clara-parabricks/GEPSi",
       include_package_data=True,
       install_requires=required_packages,
       packages=find_namespace_packages(),
@@ -79,7 +77,7 @@ setup(name='geps',
       long_description='Python libraries and utilities for manipulating '
                        'genomics data',
       classifiers=pyaw_classifiers,
-      entry_points={'console_scripts': ['geps = scripts.main:main']},
+      entry_points={'console_scripts': ['gepsi = scripts.main:main']},
       data_files=[
           ('configs', ['configs/genotype.yaml',
                        'configs/phenotype.yaml'])],

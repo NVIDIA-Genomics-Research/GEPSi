@@ -24,6 +24,7 @@ PyYAML==5.3.1
 scipy==1.5.4
 six==1.15.0
 sorted-nearest==0.0.31
+tables==3.6.1
 tabulate==0.8.9
 toml==0.10.2
 tqdm==4.59.0

@@ -156,5 +156,5 @@ Utilizing randomly generated SNPs, the notebook walks through how to form custom
 
 The command below can be run inside the GEPS directoryto create sample data for testing purposes.
 ```
-geps phenotype -dp ./ch0/ --data_identifier chr0_test --prefilter exon --phenotype_experiement_name playground_example
+geps phenotype -dp ./sample_data/ --data_identifier chr0_test --phenotype_experiement_name playground_example
 ```
