@@ -1,15 +1,23 @@
-data_path: "/home/dreidenbach/Desktop/gwas/hapgen2/data/chr1_21/"
-data_identifier: "chr1_100k_exon"
-phenotype_experiement_name: "chr1_benchmark_random"
+#
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+#
+data_path: "/home/dreidenbach/Desktop/gwas/hapgen2/data/chr1_time_test/"
+data_identifier: "100k_exon"
+phenotype_experiement_name: "chr1_benchmark_time"
 interactive_cut: 0.2
 mask_rate: 0.1
 dominance_frac: 0.1
 recessive_frac: 0.1
 max_interaction_coeff: 2
 phenotype_threshold: 50
-heritability: 1
-causal_snp_mode: "random"
+heritability: 0.8
+causal_snp_mode: "gene"
 n_causal_snps: 100
 causal_gene_cut: 0.05
 max_gene_risk: 5
-patient_chunk: 5000

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #
 # Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
 #
@@ -10,7 +8,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
 
-"""Module to parse command line arguments of GWAS Data Simulation"""
+"""Module to parse command line arguments of GEPSi"""
 
 import os
 import configargparse
@@ -78,7 +76,6 @@ def add_phenotype_options(parser):
     parser.add_argument('--heritability', '-hrd', dest='heritability', type=float, nargs=None, action = 'store', default=1)
     parser.add_argument('--phenotype_threshold', '-pthresh', dest='phenotype_threshold', type=float, nargs=None, action = 'store', default=50)
     parser.add_argument('--max_gene_risk', '-mgr', dest='max_gene_risk', type=float, nargs=None, action = 'store', default=5)
-    parser.add_argument('--patient_chunk', '-pc', dest='patient_chunk', type=int, nargs=None, action = 'store', default=100)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
 
 def parse_args(root_dir):
@@ -132,15 +129,13 @@ def parse_args(root_dir):
              params = {
                 "max_interaction_coeff":args.max_interaction_coeff,
                 "phenotype_threshold":args.phenotype_threshold,
-                "n_causal_snps":args.n_causal_snps,
-                "patient_chunk":args.patient_chunk }
+                "n_causal_snps":args.n_causal_snps}
         if args.causal_snp_mode == "gene":
             params = {
                 "max_interaction_coeff":args.max_interaction_coeff,
                 "phenotype_threshold":args.phenotype_threshold,
                 "causal_gene_cut":args.causal_gene_cut,
-                "max_gene_risk":args.max_gene_risk,
-                "patient_chunk":args.patient_chunk }
+                "max_gene_risk":args.max_gene_risk}
         validate_parameters(params, case = 1)
         
 #     elif args.mode == "annotation":

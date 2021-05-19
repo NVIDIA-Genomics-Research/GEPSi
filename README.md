@@ -1,6 +1,6 @@
-# GEPS: GWAS Epistatic Phenotype Simulator
+# GEPSi: GWAS Epistatic Phenotype Simulator
 
-GEPS is a toolkit to simulate phenotypes for GWAS analysis, given input genotype data for a population.
+GEPSi is a toolkit to simulate phenotypes for GWAS analysis, given input genotype data for a population.
 
 ## Installation
 
@@ -17,7 +17,7 @@ This will clone the repo to the `main` branch, which contains code for latest re
 and hot-fixes.
 
 ```
-git clone --recursive -b master https://github.com/clara-genomics/gwas-data-simulation-public.git
+git clone --recursive -b master https://github.com/clara-genomics/GEPSi.git
 ```
 
 ### 2. Install dependencies
@@ -43,12 +43,10 @@ Run unit tests to verify that installation was successful
 Genotype data should be supplied in a `.raw` format along with a `.bim` snplist file. GEPS gives us the ability to format the genotype data matrix and associated annotations into an annotated csv file.
     
 ```
-    geps genotype -data_path /GWAS/data/chr21/ --matrix_name genotype.raw --snplist_name full_snplist.bim
+    gepsi genotype -data_path /GWAS/data/chr21/ --matrix_name genotype.raw --snplist_name full_snplist.bim
 ```
     
-Results in the creation of a `.csv` file containing an annotated SNP X Person matrix with Genotype Values of 0,1,2. This data matrix is needed to run the phenotype simulation. The data matrix has columns for Chromosome, Feature ID, Position, Allele 1, Allele 2, and Risk Allele. 
-
-![Alt text](./annotated_matrix_result.png?raw=true "Title")
+Results in the creation of a `.h5` file containing a Person X SNP matrix with Genotype Values of 0,1,2 and and annotated snplist `.csv` that is needed to run the phenotype simulation. The snplist has columns for Chromosome, Feature ID, Position, Allele 1, Allele 2, and Risk Allele. 
 
 The `.raw` and `.bim` files can be produced from other formats using [PLINK](https://www.cog-genomics.org/plink/). PLINK can also be used to filter SNPs within selected regions (exons, transcripts, or genes) as well as filter SNPs based on their allele frequencies. 
 
@@ -62,8 +60,8 @@ For example, we used the following PLINK v1.9 command to filter and format genot
   --extract range <BED file containing exon positions for chr21> \
   --allow-no-sex \
   --snps-only \
-  --write-snplist \
   --recode A \
+  --oxford-single-chr 21 \
   --out genotype
   
 /plink \
@@ -88,7 +86,7 @@ Resulting in the creation of
 
 Create Phenotypes for generated phenotypes using default values.
 ```
-geps phenotype --data_path /GWAS/data/chr21/ --data_identifier chr21_100k --prefilter exon --phenotype_experiement_name example_name
+gepsi phenotype --data_path /GWAS/data/chr21/ --data_identifier chr21_100k --prefilter exon --phenotype_experiement_name example_name
 ```
     
 Results in the creation of
@@ -158,5 +156,5 @@ Utilizing randomly generated SNPs, the notebook walks through how to form custom
 
 The command below can be run inside the GEPS directoryto create sample data for testing purposes.
 ```
-geps phenotype -dp ./ch0/ --data_identifier chr0_test --prefilter exon --phenotype_experiement_name playground_example
+gepsi phenotype -dp ./sample_data/ --data_identifier chr0_test --phenotype_experiement_name playground_example
 ```

@@ -1,3 +1,12 @@
+#
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+#
 import json
 import os
 import pickle
@@ -10,6 +19,7 @@ import pandas as pd
 import pyranges as pr
 import scipy
 import scipy.sparse
+import tables
 import tqdm
 
 class PhenotypeSimulator():
@@ -25,7 +35,6 @@ class PhenotypeSimulator():
         self.causal_snp_mode = args.causal_snp_mode
         self.heritability = args.heritability 
         self.phenotype_threshold = args.phenotype_threshold
-        self.patient_chunk = args.patient_chunk 
         if self.causal_snp_mode == "random":
             self.n_causal_snps = args.n_causal_snps 
         if self.causal_snp_mode == "gene":
@@ -33,26 +42,19 @@ class PhenotypeSimulator():
             self.max_gene_risk = args.max_gene_risk 
         
     def get_number_patients(self):
-        #known to have 6 metadata columns: Chromosome, Position, Allele 1, Allele 2, Risk Allele, Feature ID
-        df = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", nrows=1)
-        self.num_patients = df.shape[1]-6
+        with tables.open_file(self.data_path + "genotype_{}.h5".format(self.data_identifier), "r") as f:
+            self.num_patients = f.root.data.shape[0]
         return self.num_patients
                          
-    def get_person(self, person):
-        if type(person) == list:
-            patient = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", usecols=[str(pear) for pear in person])
-        else:
-            patient = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", usecols=[str(person)])
-        return patient
-
     def read_genotype_data(self):
         """
         Reads in the annotated genotype csv file.
         """
-        df = pd.read_csv(self.data_path + "genotype_{}.csv".format(self.data_identifier), sep=" ", usecols=['Risk Allele','Feature ID'], dtype={'Feature ID': object})
+        df = pd.read_csv(self.data_path + "snplist_{}.csv".format(self.data_identifier), sep=" ", usecols=['Risk Allele','Feature ID'], dtype={'Feature ID': object})
         df['Feature ID'] = df['Feature ID'].apply(lambda x: json.loads(x) if type(x) == str else x)
         self.risk_alleles = df['Risk Allele'].to_list()
         self.feature_id = df['Feature ID'].to_list()
+        self.num_snps = len(self.risk_alleles)
         print("SNPs: {} People: {}".format(len(self.risk_alleles), self.get_number_patients()))
         return self.risk_alleles, self.feature_id
     
@@ -90,6 +92,7 @@ class PhenotypeSimulator():
         phenotype_cutoff = np.percentile(phenotype_scores, self.phenotype_threshold)
         phenotype = [1 if x >= phenotype_cutoff else 0 for x in phenotype_scores]
         self.save_file("phenotype", phenotype)
+        print("Success!")
         return phenotype, causal_snps_idx, effect_size, interactive_snps
     
     def heritability_injection(self, scores):
@@ -101,7 +104,7 @@ class PhenotypeSimulator():
         scores = (scores - np.mean(scores))/np.std(scores)
         #Apply g' = h*g + sqrt(1-h^2)*N(0,1)
         phenotype_scores = self.heritability * scores + np.random.randn(len(scores)) * np.sqrt(1 - self.heritability * self.heritability)
-        self.get_distribution(phenotype_scores, title = "Phenotype Scores with Heredity {}".format(self.heritability), ylabel="Number of People", xlabel="Genetic Risk Score")
+        self.get_distribution(phenotype_scores, title = "Phenotype Scores with Heredity {} {}".format(self.heritability, self.phenotype_experiement_name), ylabel="Number of People", xlabel="Genetic Risk Score")
         return phenotype_scores
     
     def patient_level_score_injection(self, scores, patients, coefficients):
@@ -153,7 +156,7 @@ class PhenotypeSimulator():
             interaction.append(self.risk_alleles[partner])
             interactive_snps[idx] = interaction
         self.save_file("interactive_snps", interactive_snps)
-        self.get_distribution(coeff, title = "{} Interactive Coefficients".format(self.data_identifier), ylabel="Number of SNPs", xlabel="Interaction Coefficients")
+        self.get_distribution(coeff, title = "{} Interactive Coefficients".format(self.phenotype_experiement_name), ylabel="Number of SNPs", xlabel="Interaction Coefficients")
         return interactive_snps
 
     def get_score(self, person, effect_size, interactive_snps):
@@ -162,7 +165,7 @@ class PhenotypeSimulator():
 
         Parameters
         ----------
-        person: Person column of Genotype file
+        person: Person row of Genotype file
         effect_size: Dictionary that maps causal snp indexes to length 3 list that has the effect size per genotyple value {0, 1, 2} accesed via index
         interactive_snps: Dictionary that maps causal snp indexes to a length 3 list [Interactive SNP Index Pair, Interaction Coefficeint, Partner Risk Allele]
 
@@ -186,13 +189,9 @@ class PhenotypeSimulator():
         """
          Parameters
         ----------
-        data: Dataframe that can be supplied directly from generate_genotype_file
         effect_size: Dictionary that maps causal snp indexes to length 3 list that has the effect size per genotyple value {0, 1, 2} accesed via index
         interactive_snps: Dictionary that maps causal snp indexes to a length 2 list [Interactive SNP Index Pair, Interaction Coefficeint]
-        causal_snps_idx: List of SNP indices that are chosen as the causal SNPs
-        cut: Fraction of causal SNPs to have an interacting pair
-        mask_rate: Fraction of interactive realtions that are masking
-        max_interaction_coeff: Upper bound of Uniform Distribution for interaction coefficient Sampling
+        causal_snps_idx: Dictionary of SNP indices that are chosen as the causal SNPs to gene risk coefficients if present.
 
         Results
         -------
@@ -200,22 +199,13 @@ class PhenotypeSimulator():
         Returns the calculated phenotype scores.
         """
         interactive_snps =  self.gen_snp_interaction(causal_snps_idx)
-        num_patients = self.get_number_patients()
-        pheno_scores = []
-        for patient in range(0, num_patients,  self.patient_chunk):
-            patient_list = list(range(patient, patient + self.patient_chunk))
-            patients = self.get_person(patient_list)
-            inner_pheno_scores = [self.get_score(patients[str(person)].to_list(), effect_size, interactive_snps) for person in patient_list]
-            pheno_scores.extend(inner_pheno_scores)
-        if num_patients % self.patient_chunk != 0:
-            patient_list = list(range(num_patients-(num_patients % self.patient_chunk), num_patients))
-            patients = self.get_person(patient_list)
-            inner_pheno_scores = [self.get_score(patients[str(person)].to_list(), effect_size, interactive_snps) for person in patient_list]
-            pheno_scores.extend(inner_pheno_scores)
-        self.get_distribution(pheno_scores, title = "{} Phenotype Scores".format(self.data_identifier), ylabel="Number of People", xlabel="Genetic Risk Score")
-        print(len(pheno_scores), "Phenotype scores")
+        with tables.open_file(self.data_path + "genotype_{}.h5".format(self.data_identifier), "r") as f:
+            patients = f.root.data
+            pheno_scores = [self.get_score(patients[idx,:], effect_size, interactive_snps) for idx in range(patients.shape[0])]                        
+        self.get_distribution(pheno_scores, title = "{} Phenotype Scores".format(self.phenotype_experiement_name), ylabel="Number of People", xlabel="Genetic Risk Score")
+        print(len(pheno_scores), "Phenotype Scores Closed")
         return pheno_scores, interactive_snps
-    
+                                  
     def simulate_causal_snps_random(self):
         """
         Simulates causal SNP selection and generates effect sizes
@@ -238,8 +228,25 @@ class PhenotypeSimulator():
         causal_snps_id = np.random.choice(possible_snps, size = self.n_causal_snps, replace=False)
         causal_snps_idx = {idx: 1 for idx in causal_snps_id}
         effect_size = self.simulate_effect_sizes(causal_snps_idx)
+        causal_genes = self.get_causal_genes(causal_snps_id)
+        self.save_file("causal_genes", causal_genes)
+        self.save_file("causal_snp_idx", causal_snps_idx)
         return effect_size, causal_snps_id
 
+    def get_causal_genes(self, snp_ids):
+        """
+        Grabs genes associated for random causal snp selection.
+        """
+        causal_genes = {}
+        for snp in snp_ids:
+            genes = self.feature_id[snp]
+            if type(genes) == list:
+                for g in genes:
+                    causal_genes[g] = 1
+            else:
+                causal_genes[genes] = 1
+        return causal_genes
+                    
     def get_unique_genes(self):
         """
         Given dataframe return list of unique genes present
@@ -248,7 +255,9 @@ class PhenotypeSimulator():
         gene_list = self.feature_id
         gene_set = set()
         for g in gene_list:
-            if type(g) == int and g >= 0:
+            if type(g) == int:
+                if g < 0:
+                    continue
                 gene_set.add(g)
             else:
                 gene_set.update(g)
@@ -306,7 +315,6 @@ class PhenotypeSimulator():
         """
         effect_size = {}
         self.dosage_frac = 1 - self.dominance_frac - self.recessive_frac
-        
         dominant = np.random.choice([k for k in causal_snps_idx.keys()], size = int(self.dominance_frac*len(causal_snps_idx.keys())), replace=False)
         leftover = list(set(causal_snps_idx.keys()).difference(set(dominant)))
         recessive = np.random.choice([k for k in leftover], size = int(self.recessive_frac*len(causal_snps_idx.keys())), replace=False)

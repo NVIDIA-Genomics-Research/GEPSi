@@ -17,33 +17,33 @@ import pytest
 
 from scripts.phenotype_simulator import PhenotypeSimulator
 
-def test_phenotype_simulation(CHR=0,data_path="./",data_identifier="test",prefilter="exon",
+def test_phenotype_simulation(data_path="./sample_data/",data_identifier="chr0_test",
                                       phenotype_experiement_name="playground_example",interactive_cut=0.2,mask_rate=0.1,
-                                      dosage_frac=0.5, max_interaction_coeff=2, causal_snp_mode="gene", noise_scalar=1,
-                                      heritability=1, phenotype_threshold=50, n_causal_snps=100, causal_gene_cut=0.005, max_gene_risk=5,
+                                      dominance_frac=0.1,recessive_frac=0.1, max_interaction_coeff=2, causal_snp_mode="gene",
+                                      heritability=1, phenotype_threshold=50, n_causal_snps=100, causal_gene_cut=0.05, max_gene_risk=5,
                                       total_snps=1000, total_genes=100, total_people=100):
     """
     Runs end to end test of phenotype simulation. Validates size and typing for all major results.
     """
     
-    args = Namespace(chr=CHR, data_path=data_path, data_identifier=data_identifier,
-                         prefilter=prefilter, phenotype_experiement_name=phenotype_experiement_name,
-                         interactive_cut=interactive_cut, mask_rate=mask_rate, dosage_frac=dosage_frac,
-                         max_interaction_coeff=max_interaction_coeff, causal_snp_mode=causal_snp_mode,
-                         noise_scalar=noise_scalar, heritability=heritability, phenotype_threshold=phenotype_threshold,
+    args = Namespace(data_path=data_path, data_identifier=data_identifier,
+                         phenotype_experiement_name=phenotype_experiement_name,
+                         interactive_cut=interactive_cut, mask_rate=mask_rate,
+                         max_interaction_coeff=max_interaction_coeff, causal_snp_mode=causal_snp_mode,recessive_frac=recessive_frac,
+                         heritability=heritability, phenotype_threshold=phenotype_threshold,dominance_frac=dominance_frac,
                          n_causal_snps=n_causal_snps, causal_gene_cut=causal_gene_cut, max_gene_risk=max_gene_risk)
     
     pheno_sim = PhenotypeSimulator(args)
     
-    genotype_data_validation(pheno_sim, total_snps, total_genes, total_people)
-    
-    phenotype, data, causal_snps_idx, effect_size, interactive_snps = pheno_sim.simulate_phenotype()
+    phenotype, causal_snps_idx, effect_size, interactive_snps = pheno_sim.simulate_phenotype()
     
     phenotype_validation(phenotype, total_people)
     
     causality_validation(effect_size, causal_snps_idx)
     
-    interaction_validation(data, interactive_snps, causal_snps_idx)
+    snplist = pd.read_csv(data_path + "snplist_{}.csv".format(data_identifier), sep=" ")
+    
+    interaction_validation(snplist, interactive_snps, causal_snps_idx)
 
 def interaction_validation(data, interactive_snps, causal_snps_idx):
     assert type(interactive_snps) == dict
@@ -67,26 +67,3 @@ def phenotype_validation(phenotype, total_people):
     assert len(phenotype) == total_people
     assert min(phenotype) == 0
     assert max(phenotype) == 1
-
-    
-def genotype_data_validation(pheno_sim, snps, genes, people):
-    data = pheno_sim.read_genotype_data()
-    expected_shape = (snps, people+5)
-    assert data.shape == expected_shape
-    expected_columns = ['Feature ID', 'Position', 'Allele 1', 'Allele 2', 'Risk Allele']+[str(x) for x in range(people)]
-    for dc, ec in zip(data.columns, expected_columns):
-        assert dc == ec
-        
-    def condition(x):
-        if type(x)== list:
-            if min(x) < 0 or max(x) >= genes:
-                return 1
-            return 0
-        elif x < 0 or x >= genes:
-            return 1
-        return 0
-    
-    invalid_gene_mapping = sum(data['Feature ID'].apply(condition))
-    assert invalid_gene_mapping == 0
-    for person in range(people):
-        assert data[str(person)].value_counts().shape[0] == 2
