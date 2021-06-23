@@ -35,6 +35,7 @@ class PhenotypeSimulator():
         self.causal_snp_mode = args.causal_snp_mode
         self.heritability = args.heritability 
         self.phenotype_threshold = args.phenotype_threshold
+        self.stratify = args.stratify
         if self.causal_snp_mode == "random":
             self.n_causal_snps = args.n_causal_snps 
         if self.causal_snp_mode == "gene":
@@ -58,10 +59,19 @@ class PhenotypeSimulator():
         print("SNPs: {} People: {}".format(len(self.risk_alleles), self.get_number_patients()))
         return self.risk_alleles, self.feature_id
     
+    def read_stratification_files(self):
+        """
+        Reads in the files for groups and group coefficients.
+        """
+        groups = pd.read_csv(self.data_path + "groups_{}.csv".format(self.data_identifier), header=None)
+        group_coefficients = pd.read_csv(self.data_path + "group_coefficients_{}.csv".format(self.data_identifier), header=None)
+        self.groups = groups[0].to_list()
+        self.group_coefficients = dict(zip(group_coefficients[0], group_coefficients[1]))
+    
     def save_file(self, fname, data):
         with open(self.data_path + "{}_{}_{}.pkl".format(fname, self.data_identifier, self.phenotype_experiement_name), 'wb') as f:
             pickle.dump(data, f)
-    
+        
     def simulate_phenotype(self):
         """
         Simulates causal SNP sampling and effect size creation if not done already.
@@ -89,6 +99,9 @@ class PhenotypeSimulator():
             effect_size, causal_snps_idx = self.simulate_causal_snps_gene()
         phenotype_scores, interactive_snps = self.generate_phenotypes_scores(effect_size, causal_snps_idx)
         phenotype_scores = self.heritability_injection(phenotype_scores)
+        if self.stratify:
+            self.read_stratification_files()
+            phenotype_scores = self.patient_level_score_injection(phenotype_scores)
         phenotype_cutoff = np.percentile(phenotype_scores, self.phenotype_threshold)
         phenotype = [1 if x >= phenotype_cutoff else 0 for x in phenotype_scores]
         self.save_file("phenotype", phenotype)
@@ -107,11 +120,11 @@ class PhenotypeSimulator():
         self.get_distribution(phenotype_scores, title = "Phenotype Scores with Heredity {} {}".format(self.heritability, self.phenotype_experiement_name), ylabel="Number of People", xlabel="Genetic Risk Score")
         return phenotype_scores
     
-    def patient_level_score_injection(self, scores, patients, coefficients):
+    def patient_level_score_injection(self, scores):
         #coefficients is a dictionary of labels to coefficients
-        patient_level_bias = [coefficients[patient] for patient in patients]
-        new_score = score + patient_level_bias
-        return new_score
+        patient_level_bias = [self.group_coefficients[group] for group in self.groups]
+        new_scores = scores + patient_level_bias
+        return new_scores
     
     def patient_level_func_injection(self, scores, patients, coefficients):
         #coefficients is a dictionary of labels to functions of genetic risk score

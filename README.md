@@ -136,11 +136,14 @@ Histograms of the sampling distributions are created and saved for every major s
 | -df --dominance_frac | 0.1 | Fraction of causal SNPs whose effects are dominant |
 | -rf --recessive_frac | 0.1 | Fraction of causal SNPs whose effects are recessive |
 | -mic --max_interaction_coeff | 2 | Upper bound for Interaction Coefficient between two SNPs|
+| -st --stratify | False | Stratify individuals in the population based on given groups |
 | -pthresh --phenotype_threshold | 50 | Percentile for Phenotype case/control determination |
 | --causal_snp_mode | "gene" | Method to select causal SNPs {gene, random} |
 | -num_snps --n_causal_snps | 100 | Number of Causal SNPs <br /> **required for random mode** |
 | -cgc --causal_gene_cut | 0.05 | Fraction of Causal Genes <br /> **required for gene mode** |
 | -mgr --max_gene_risk | 5 | Upper bound for Gene Risk Coefficient <br /> **required for gene mode** |
+
+If `--stratify` is used, two additional files must be provided in `--data_path`. These are `groups_{data_identifier}.csv` and `group_coefficients_{data_identifier}.csv`. `groups_{data_identifier}.csv` should contain a group ID for each individual in the population, one per line, in the same order as individuals in the genotype matrix. `group_coefficients_{data_identifier}.csv` should be a comma-separated file with two columns, the first column listing the unique group IDs in `groups_{data_identifier}.csv` and the second giving a numeric coefficient to be added to the genetic risk score for all individuals with the given group ID.
 
 
 ## Results
