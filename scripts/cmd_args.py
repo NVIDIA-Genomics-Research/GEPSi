@@ -72,8 +72,8 @@ def add_phenotype_options(parser):
     parser.add('--causal_snp_mode', required=False, type=str, choices=['gene', 'random'],help="causal snp generation method")
     parser.add_argument('--n_causal_snps', '-num_snps', dest='n_causal_snps', type=int, nargs=None, action = 'store', default=100)
     parser.add_argument('--causal_gene_cut', '-cgc', dest='causal_gene_cut', type=float, nargs=None, action = 'store', default=0.05)
-    
     parser.add_argument('--heritability', '-hrd', dest='heritability', type=float, nargs=None, action = 'store', default=1)
+    parser.add_argument('--stratify', '-st', dest='stratify', default=False, action="store_true", help="Flag to stratify individuals based on given groups. Group and Group coefficient files must be included in --data_path.")
     parser.add_argument('--phenotype_threshold', '-pthresh', dest='phenotype_threshold', type=float, nargs=None, action = 'store', default=50)
     parser.add_argument('--max_gene_risk', '-mgr', dest='max_gene_risk', type=float, nargs=None, action = 'store', default=5)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
