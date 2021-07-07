@@ -26,6 +26,7 @@ def main():
     elif args.mode == "annotation":
         genotype_sim = GenotypeSimulator(args)
         genotype_sim.clean_annotations(args.features)
+
         
 if __name__ == '__main__':
     main()

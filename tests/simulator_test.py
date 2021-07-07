@@ -8,19 +8,17 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
 """Unit tests for Package."""
-import os
 
-import pandas as pd
 from argparse import Namespace
-import numpy as np
-import pytest
+import pandas as pd
 
 from scripts.phenotype_simulator import PhenotypeSimulator
+
 
 def test_phenotype_simulation(data_path="./sample_data/",data_identifier="chr0_test",
                                       phenotype_experiement_name="playground_example",interactive_cut=0.2,mask_rate=0.1,
                                       dominance_frac=0.1,recessive_frac=0.1, max_interaction_coeff=2, causal_snp_mode="gene",
-                                      heritability=1, phenotype_threshold=50, n_causal_snps=100, causal_gene_cut=0.05, max_gene_risk=5,
+                                      heritability=1, phenotype_threshold=50, stratify=False, n_causal_snps=100, causal_gene_cut=0.05, max_gene_risk=5,
                                       total_snps=1000, total_genes=100, total_people=100):
     """
     Runs end to end test of phenotype simulation. Validates size and typing for all major results.
@@ -30,9 +28,9 @@ def test_phenotype_simulation(data_path="./sample_data/",data_identifier="chr0_t
                          phenotype_experiement_name=phenotype_experiement_name,
                          interactive_cut=interactive_cut, mask_rate=mask_rate,
                          max_interaction_coeff=max_interaction_coeff, causal_snp_mode=causal_snp_mode,recessive_frac=recessive_frac,
-                         heritability=heritability, phenotype_threshold=phenotype_threshold,dominance_frac=dominance_frac,
+                         heritability=heritability, phenotype_threshold=phenotype_threshold, stratify=stratify, dominance_frac=dominance_frac,
                          n_causal_snps=n_causal_snps, causal_gene_cut=causal_gene_cut, max_gene_risk=max_gene_risk)
-    
+
     pheno_sim = PhenotypeSimulator(args)
     
     phenotype, causal_snps_idx, effect_size, interactive_snps = pheno_sim.simulate_phenotype()
@@ -45,6 +43,7 @@ def test_phenotype_simulation(data_path="./sample_data/",data_identifier="chr0_t
     
     interaction_validation(snplist, interactive_snps, causal_snps_idx)
 
+
 def interaction_validation(data, interactive_snps, causal_snps_idx):
     assert type(interactive_snps) == dict
     for causal_snp in interactive_snps.keys():
@@ -54,15 +53,16 @@ def interaction_validation(data, interactive_snps, causal_snps_idx):
         other_snp, other_risk = info[0], info[2]
         assert other_snp >= 0 and other_snp <= data.shape[0]
         assert data.iloc[other_snp]['Risk Allele'] == other_risk
-    
+
+
 def causality_validation(effect_size, causal_snps_idx):
     assert type(effect_size) == dict
     assert type(causal_snps_idx) == list
     for snp in effect_size.keys():
         assert snp in causal_snps_idx
         assert len(effect_size[snp]) == 3
-    
-    
+
+
 def phenotype_validation(phenotype, total_people):
     assert len(phenotype) == total_people
     assert min(phenotype) == 0

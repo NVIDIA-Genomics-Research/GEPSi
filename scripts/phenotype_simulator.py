@@ -7,20 +7,13 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
-import json
-import os
-import pickle
-import subprocess
-import time
 
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pyranges as pr
-import scipy
-import scipy.sparse
+import pickle
 import tables
-import tqdm
 
 class PhenotypeSimulator():
     def __init__(self, args):

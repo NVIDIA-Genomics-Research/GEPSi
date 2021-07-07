@@ -13,6 +13,7 @@
 import os
 import configargparse
 
+
 def add_common_options(parser):
     """Add common options to the parser.
     Args:
@@ -114,9 +115,10 @@ def parse_args(root_dir):
     add_phenotype_options(parser_pheno)
     # =========================================================================
     args, extra = parser.parse_known_args()
-#     if args.mode == "genotype":
-#         # check genotype params   
-    if args.mode == "phenotype":
+    if args.mode == "genotype":
+        # check genotype params
+        pass
+    elif args.mode == "phenotype":
         params = {
             "interactive_cut":args.interactive_cut,
             "mask_rate":args.mask_rate,
@@ -137,11 +139,14 @@ def parse_args(root_dir):
                 "causal_gene_cut":args.causal_gene_cut,
                 "max_gene_risk":args.max_gene_risk}
         validate_parameters(params, case = 1)
-        
-#     elif args.mode == "annotation":
-#         #check annotation params
-
+    elif args.mode == "annotation":
+        # check annotation params
+        pass
+    elif not args.mode:
+        parser.print_help()
+        parser.error("Please choose simulation mode")
     return args
+
 
 def validate_parameters(params, case):
     if case == 0:
@@ -152,4 +157,3 @@ def validate_parameters(params, case):
         for name, param in params.items():
             if param <= 0:
                 raise ValueError('Invalid value for {}. Acceptible values > 0'.format(name)) 
-        
