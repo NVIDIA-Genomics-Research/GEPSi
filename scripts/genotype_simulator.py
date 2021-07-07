@@ -7,17 +7,13 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
-import json
-import os
-import pickle
-import subprocess
 
-import matplotlib.pyplot as plt
+import json
 import numpy as np
+import os
 import pandas as pd
 import pyranges as pr
-import scipy
-import scipy.sparse
+import subprocess
 import tables
 import tqdm
 
