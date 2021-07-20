@@ -161,3 +161,7 @@ The command below can be run inside the GEPS directoryto create sample data for 
 ```
 gepsi phenotype -dp ./sample_data/ --data_identifier chr0_test --phenotype_experiement_name playground_example
 ```
+
+## External contributions
+
+To contribute to GEPSi, please see `NVIDIA_CLA_v1.0.1.docx`.
