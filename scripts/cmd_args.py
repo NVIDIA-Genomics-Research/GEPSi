@@ -138,7 +138,6 @@ def parse_args(root_dir):
                 "causal_gene_cut":args.causal_gene_cut,
                 "max_gene_risk":args.max_gene_risk}
         validate_parameters(params, case = 1)
-        params
     elif args.mode == "annotation":
         # check annotation params
         pass
