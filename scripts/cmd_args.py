@@ -64,7 +64,7 @@ def add_phenotype_options(parser):
         parser : After adding the arguments.
     """
     add_common_options(parser)
-    parser.add_argument('--phenotype_experiement_name', '-pname', dest='phenotype_experiement_name', type=str, nargs=None, action = 'store', default="")
+    parser.add_argument('--phenotype_experiment_name', '-pname', dest='phenotype_experiment_name', type=str, nargs=None, action = 'store', default="")
     parser.add_argument('--interactive_cut', '-cut', dest='interactive_cut', required=False, type=float, nargs=None, action = 'store', default=0.2)
     parser.add_argument('--mask_rate', '-mask', dest='mask_rate', required=False, type=float, nargs=None, action = 'store', default=0.1)
     parser.add_argument('--dominance_frac', '-df', dest='dominance_frac', required=False, type=float, nargs=None, action = 'store', default=0.1)
@@ -75,7 +75,7 @@ def add_phenotype_options(parser):
     parser.add_argument('--causal_gene_cut', '-cgc', dest='causal_gene_cut', type=float, nargs=None, action = 'store', default=0.05)
     parser.add_argument('--heritability', '-hrd', dest='heritability', type=float, nargs=None, action = 'store', default=1)
     parser.add_argument('--stratify', '-st', dest='stratify', default=False, action="store_true", help="Flag to stratify individuals based on given groups. Group and Group coefficient files must be included in --data_path.")
-    parser.add_argument('--phenotype_threshold', '-pthresh', dest='phenotype_threshold', type=float, nargs=None, action = 'store', default=50)
+    parser.add_argument('--case_frac', '-cf', dest='case_frac', type=float, nargs=None, action = 'store', default=0.5, help="Fraction of individuals to be classified as cases. If set to 0, raw scores will be returned.")
     parser.add_argument('--max_gene_risk', '-mgr', dest='max_gene_risk', type=float, nargs=None, action = 'store', default=5)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
 
@@ -125,20 +125,20 @@ def parse_args(root_dir):
             "dominance_frac":args.dominance_frac,
             "recessive_frac":args.recessive_frac,
             "dosage_frac": 1 - args.dominance_frac - args.recessive_frac,
+            "case_frac": args.case_frac,
             "heritability":args.heritability }
         validate_parameters(params, case = 0)
         if args.causal_snp_mode == "random":
              params = {
                 "max_interaction_coeff":args.max_interaction_coeff,
-                "phenotype_threshold":args.phenotype_threshold,
                 "n_causal_snps":args.n_causal_snps}
         if args.causal_snp_mode == "gene":
             params = {
                 "max_interaction_coeff":args.max_interaction_coeff,
-                "phenotype_threshold":args.phenotype_threshold,
                 "causal_gene_cut":args.causal_gene_cut,
                 "max_gene_risk":args.max_gene_risk}
         validate_parameters(params, case = 1)
+        params
     elif args.mode == "annotation":
         # check annotation params
         pass

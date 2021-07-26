@@ -19,7 +19,7 @@ class PhenotypeSimulator():
     def __init__(self, args):
         self.data_path = args.data_path
         self.data_identifier = args.data_identifier
-        self.phenotype_experiement_name = args.phenotype_experiement_name
+        self.phenotype_experiment_name = args.phenotype_experiment_name
         self.interactive_cut = args.interactive_cut 
         self.mask_rate = args.mask_rate 
         self.dominance_frac = args.dominance_frac  
@@ -27,7 +27,7 @@ class PhenotypeSimulator():
         self.max_interaction_coeff = args.max_interaction_coeff 
         self.causal_snp_mode = args.causal_snp_mode
         self.heritability = args.heritability 
-        self.phenotype_threshold = args.phenotype_threshold
+        self.case_frac = args.case_frac
         self.stratify = args.stratify
         if self.causal_snp_mode == "random":
             self.n_causal_snps = args.n_causal_snps 
@@ -62,7 +62,7 @@ class PhenotypeSimulator():
         self.group_coefficients = dict(zip(group_coefficients[0], group_coefficients[1]))
     
     def save_file(self, fname, data):
-        with open(self.data_path + "{}_{}_{}.pkl".format(fname, self.data_identifier, self.phenotype_experiement_name), 'wb') as f:
+        with open(self.data_path + "{}_{}_{}.pkl".format(fname, self.data_identifier, self.phenotype_experiment_name), 'wb') as f:
             pickle.dump(data, f)
         
     def simulate_phenotype(self):
@@ -95,8 +95,11 @@ class PhenotypeSimulator():
         if self.stratify:
             self.read_stratification_files()
             phenotype_scores = self.patient_level_score_injection(phenotype_scores)
-        phenotype_cutoff = np.percentile(phenotype_scores, self.phenotype_threshold)
-        phenotype = [1 if x >= phenotype_cutoff else 0 for x in phenotype_scores]
+        if self.case_frac > 0:
+            phenotype_cutoff = np.percentile(phenotype_scores, self.case_frac*100)
+            phenotype = [1 if x >= phenotype_cutoff else 0 for x in phenotype_scores]
+        else:
+            phenotype = list(phenotype_scores)
         self.save_file("phenotype", phenotype)
         print("Success!")
         return phenotype, causal_snps_idx, effect_size, interactive_snps
@@ -110,7 +113,7 @@ class PhenotypeSimulator():
         scores = (scores - np.mean(scores))/np.std(scores)
         #Apply g' = h*g + sqrt(1-h^2)*N(0,1)
         phenotype_scores = self.heritability * scores + np.random.randn(len(scores)) * np.sqrt(1 - self.heritability * self.heritability)
-        self.get_distribution(phenotype_scores, title = "Phenotype Scores with Heredity {} {}".format(self.heritability, self.phenotype_experiement_name), ylabel="Number of People", xlabel="Genetic Risk Score")
+        self.get_distribution(phenotype_scores, title = "Phenotype Scores with Heredity {} {}".format(self.heritability, self.phenotype_experiment_name), ylabel="Number of People", xlabel="Genetic Risk Score")
         return phenotype_scores
     
     def patient_level_score_injection(self, scores):
@@ -162,7 +165,7 @@ class PhenotypeSimulator():
             interaction.append(self.risk_alleles[partner])
             interactive_snps[idx] = interaction
         self.save_file("interactive_snps", interactive_snps)
-        self.get_distribution(coeff, title = "{} Interactive Coefficients".format(self.phenotype_experiement_name), ylabel="Number of SNPs", xlabel="Interaction Coefficients")
+        self.get_distribution(coeff, title = "{} Interactive Coefficients".format(self.phenotype_experiment_name), ylabel="Number of SNPs", xlabel="Interaction Coefficients")
         return interactive_snps
 
     def get_score(self, person, effect_size, interactive_snps):
@@ -208,7 +211,7 @@ class PhenotypeSimulator():
         with tables.open_file(self.data_path + "genotype_{}.h5".format(self.data_identifier), "r") as f:
             patients = f.root.data
             pheno_scores = [self.get_score(patients[idx,:], effect_size, interactive_snps) for idx in range(patients.shape[0])]                        
-        self.get_distribution(pheno_scores, title = "{} Phenotype Scores".format(self.phenotype_experiement_name), ylabel="Number of People", xlabel="Genetic Risk Score")
+        self.get_distribution(pheno_scores, title = "{} Phenotype Scores".format(self.phenotype_experiment_name), ylabel="Number of People", xlabel="Genetic Risk Score")
         print(len(pheno_scores), "Phenotype Scores Closed")
         return pheno_scores, interactive_snps
                                   
@@ -290,7 +293,7 @@ class PhenotypeSimulator():
         plt.title(title)
         plt.ylabel(ylabel)
         plt.xlabel(xlabel)
-        plt.savefig(self.data_path +'{}.png'.format(title))
+        plt.savefig(self.data_path +'{}.png'.format(title.replace(' ', '_')))
         plt.close()
         
     def simulate_causal_snps_gene(self):
