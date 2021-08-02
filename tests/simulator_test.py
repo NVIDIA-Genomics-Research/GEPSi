@@ -16,19 +16,19 @@ from scripts.phenotype_simulator import PhenotypeSimulator
 
 
 def test_phenotype_simulation(data_path="./sample_data/",data_identifier="chr0_test",
-                                      phenotype_experiement_name="playground_example",interactive_cut=0.2,mask_rate=0.1,
+                                      phenotype_experiment_name="playground_example",interactive_cut=0.2,mask_rate=0.1,
                                       dominance_frac=0.1,recessive_frac=0.1, max_interaction_coeff=2, causal_snp_mode="gene",
-                                      heritability=1, phenotype_threshold=50, stratify=False, n_causal_snps=100, causal_gene_cut=0.05, max_gene_risk=5,
+                                      heritability=1, case_frac=0.5, stratify=False, n_causal_snps=100, causal_gene_cut=0.05, max_gene_risk=5,
                                       total_snps=1000, total_genes=100, total_people=100):
     """
     Runs end to end test of phenotype simulation. Validates size and typing for all major results.
     """
     
     args = Namespace(data_path=data_path, data_identifier=data_identifier,
-                         phenotype_experiement_name=phenotype_experiement_name,
+                         phenotype_experiment_name=phenotype_experiment_name,
                          interactive_cut=interactive_cut, mask_rate=mask_rate,
                          max_interaction_coeff=max_interaction_coeff, causal_snp_mode=causal_snp_mode,recessive_frac=recessive_frac,
-                         heritability=heritability, phenotype_threshold=phenotype_threshold, stratify=stratify, dominance_frac=dominance_frac,
+                         heritability=heritability, case_frac=case_frac, stratify=stratify, dominance_frac=dominance_frac,
                          n_causal_snps=n_causal_snps, causal_gene_cut=causal_gene_cut, max_gene_risk=max_gene_risk)
 
     pheno_sim = PhenotypeSimulator(args)
