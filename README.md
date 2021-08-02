@@ -86,7 +86,7 @@ Resulting in the creation of
 
 Create Phenotypes for generated phenotypes using default values.
 ```
-gepsi phenotype --data_path /GWAS/data/chr21/ --data_identifier chr21_100k --prefilter exon --phenotype_experiement_name example_name
+gepsi phenotype --data_path /GWAS/data/chr21/ --data_identifier chr21_100k --prefilter exon --phenotype_experiment_name example_name
 ```
     
 Results in the creation of
@@ -130,14 +130,14 @@ Histograms of the sampling distributions are created and saved for every major s
 | -dp --data_path | /GWAS/data/ | path to data |
 | -hd --heritability | 1 | Heritability of phenotype |
 | -data --data_identifier | chr1_100k | genotype file name identifier |
-| -pname               <br />--phenotype_experiement_name | "" | Name of phenotype simulation experiment |
+| -pname               <br />--phenotype_experiment_name | "" | Name of phenotype simulation  |
 | -cut --interactive_cut | 0.2 | Fraction of causal SNPs to experience epistatic effects |
 | -mask --mask_rate | 0.1 | Fraction of inter-SNP interactions that are masking |
 | -df --dominance_frac | 0.1 | Fraction of causal SNPs whose effects are dominant |
 | -rf --recessive_frac | 0.1 | Fraction of causal SNPs whose effects are recessive |
 | -mic --max_interaction_coeff | 2 | Upper bound for Interaction Coefficient between two SNPs|
 | -st --stratify | False | Stratify individuals in the population based on given groups |
-| -pthresh --phenotype_threshold | 50 | Percentile for Phenotype case/control determination |
+| -cf --case_frac | 0.5 | Fraction of individuals to be classified as cases. Set to 0 to output raw phenotype scores instead of case/control. |
 | --causal_snp_mode | "gene" | Method to select causal SNPs {gene, random} |
 | -num_snps --n_causal_snps | 100 | Number of Causal SNPs <br /> **required for random mode** |
 | -cgc --causal_gene_cut | 0.05 | Fraction of Causal Genes <br /> **required for gene mode** |
@@ -157,9 +157,9 @@ Overview of paper and LINK
 
 Utilizing randomly generated SNPs, the notebook walks through how to form custom genotype datasets for phenotype simulation. Generated outputs are stored in the Chromosome 0 directory and are used to test the validity of the package.
 
-The command below can be run inside the GEPS directoryto create sample data for testing purposes.
+The command below can be run inside the GEPS directory to create sample data for testing purposes.
 ```
-gepsi phenotype -dp ./sample_data/ --data_identifier chr0_test --phenotype_experiement_name playground_example
+gepsi phenotype -dp ./sample_data/ --data_identifier chr0_test --phenotype_experiment_name playground_example
 ```
 
 ## External contributions
