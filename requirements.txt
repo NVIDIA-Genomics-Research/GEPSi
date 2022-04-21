@@ -6,3 +6,5 @@ pyranges==0.0.95
 pytest==6.2.3
 tables==3.6.1
 tqdm==4.59.0
+PyYAML==6.0
+
